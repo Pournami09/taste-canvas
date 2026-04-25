@@ -1,6 +1,6 @@
-# Cosmos Canvas
+# Taste Canvas
 
-Cosmos Canvas is a Next.js 15 + TypeScript web app being pitched as a new "Canvas" view mode for Cosmos.so. It turns existing Cosmos clusters from grids into spatial, connected, annotated maps of taste. The reflection layer (annotations answering "why does this resonate?") is the differentiator. Same data, new lens.
+Taste Canvas is a personal Next.js 15 + TypeScript project for building a spatial, connected, annotated map of taste. It turns collections of saved references from flat grids into infinite canvas surfaces for reflection. The reflection layer (annotations answering "why does this resonate?") is the differentiator. Same references, new lens.
 
 This file is the binding context for every Claude Code session on this repo. Read it end to end before writing code.
 
@@ -22,7 +22,7 @@ These override defaults. Do not violate them.
 3. Build in this strict order: tokens, then primitive components, then `/design-system` route to verify, then feature components, then pages, then integration. Do not skip ahead.
 4. Token discipline: never hardcode a color, spacing, radius, font size, or motion value in a component. If a value is not in the token set, add it to the token layer first, then use it.
 5. Every component must work in both light and dark mode, support keyboard navigation, and have empty/loading/error states where applicable.
-6. Match the visual direction: Linear precision plus Cosmos warmth. Snappy and precise motion, never bouncy.
+6. Match the visual direction: Linear precision plus warm, organic accents. Snappy and precise motion, never bouncy.
 7. Do not use em dashes in any code, comments, copy strings, content files, or commit messages. Use periods, semicolons, parentheses, or a colon instead.
 8. Dark mode is the design source of truth (Figma frames are dark mode). Light mode tokens are populated; design pass deferred to a later phase.
 
@@ -156,7 +156,7 @@ File: Portfolio-Website. Use the Figma MCP (configure in your Claude Code MCP se
 - Canvas View frame: node `4992:982`. Shows the full canvas surface, profile block, view toggle pill, two annotation cards (one default, one editing/orange-bordered), David statue node with hover toolbar, four image nodes, three orange endpoint dots indicating connections.
 - Grid View frame: node `5245:3988`. Shows the same design language in 3-column masonry. Two annotation cards rendered at full column width, mixed with image nodes.
 
-The "Cosmos/Glass Effect" Figma variable indicates the glass treatment is intentional, not a one-off.
+The "Glass Effect" Figma variable indicates the glass treatment is intentional, not a one-off.
 
 ## Style rules
 

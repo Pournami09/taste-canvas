@@ -1,37 +1,37 @@
 # Canvas
 
-### A Reflection Layer for Cosmos
+### A Reflection Layer for Taste
 
 **Author:** Poro
-**Status:** Pitch draft, v1
-**Audience:** Cosmos product and founding team
+**Status:** Draft, v1
+**Audience:** Personal project
 
 ---
 
 ## TL;DR
 
-Cosmos is the best place on the internet to collect things you love. But taste isn't built by collecting, it's built by reflecting. **Canvas** is a new view mode on Cosmos clusters that turns them from grids into spatial, connected, annotated maps of your taste. Users paste, arrange, connect, and, critically, write about why things resonate. It's Obsidian's graph for designers, layered on top of Cosmos's existing save-and-curate flow.
+Taste isn't built by collecting, it's built by reflecting. **Canvas** turns a flat collection of saved references into a spatial, connected, annotated map of your taste. Users paste, arrange, connect, and, critically, write about why things resonate. It's Obsidian's graph for designers, applied to reference curation.
 
-Same data, new lens. Same users, deeper loop.
+Same references, new lens. Same material, deeper loop.
 
 ---
 
 ## The Problem
 
-Designers using Cosmos, Are.na, Pinterest, and Milanote collect constantly but rarely articulate why. The grid format rewards volume and optimizes for scanning, but it flattens every relationship between items into a single signal: "they live in the same cluster."
+Designers using Are.na, Pinterest, and Milanote collect constantly but rarely articulate why. The grid format rewards volume and optimizes for scanning, but it flattens every relationship between items into a single signal: "they live in the same cluster."
 
 Two consequences:
 
 1. **Taste stays tacit.** Designers absorb patterns without being able to name them, which makes those patterns harder to apply deliberately in their work.
 2. **Collections become graveyards.** Items get saved, not revisited, because no surface in the product rewards returning to them.
 
-A small group of thoughtful designers already works around this by pasting references into a Figma file and writing annotations next to them. It's an ugly, manual practice that lives outside the tools where references are actually collected. **Canvas brings that practice inside Cosmos.**
+A small group of thoughtful designers already works around this by pasting references into a Figma file and writing annotations next to them. It's an ugly, manual practice that lives outside the tools where references are actually collected. **Canvas makes that practice a first-class tool.**
 
 ---
 
-## The Opportunity for Cosmos
+## The Opportunity
 
-Cosmos already owns the collection moment. Adding Canvas gives Cosmos ownership of the **reflection loop**, which no competitor has credibly claimed:
+No existing tool owns the **reflection loop**, and no competitor has credibly claimed it:
 
 - **Pinterest** optimizes for discovery, not depth.
 - **Are.na** has connections as a hidden primitive but no reflection surface.
@@ -44,13 +44,13 @@ Canvas deepens engagement per cluster, increases return visits (users come back 
 
 ## Hero User
 
-The thoughtful designer who already keeps reference files, writes notes in the margins of their Figma, and treats taste as something to be cultivated rather than hoarded. This is Cosmos's existing power user. The pitch is not "attract new users" but "give your most engaged users a reason to go deeper, and build the data moat while you do it."
+The thoughtful designer who already keeps reference files, writes notes in the margins of their Figma, and treats taste as something to be cultivated rather than hoarded. The goal is to give users like this a dedicated tool for going deeper, not just a wider bucket for saving things.
 
 ---
 
 ## Product Vision
 
-Canvas is a new view mode on any existing Cosmos cluster. You toggle between **Grid** (today) and **Canvas** (new). The underlying data is the same set of elements.
+Canvas is one of two view modes for a collection of references. You toggle between **Grid** and **Canvas**. The underlying data is the same set of elements.
 
 In Canvas mode:
 
@@ -69,7 +69,7 @@ In Canvas mode:
 
 **View modes**
 - Tab component at the top of every cluster toggles between **Grid** and **Canvas**.
-- Grid view: masonry layout, 4 columns, existing Cosmos behavior.
+- Grid view: masonry layout, 4 columns.
 - Canvas view: infinite pan-and-zoomable surface.
 - Both views are backed by the same underlying set of elements.
 - Light and dark mode toggle applies across both views.
@@ -191,7 +191,7 @@ This is the "taste dossier" moment. Any element on your canvas is one click away
 - **Reflection depth:** average number of annotations per canvas.
 - **Return rate:** percentage of canvases revisited within 7 days of creation.
 - **Share rate:** percentage of canvases with a public link generated.
-- **Canvas adoption within Cosmos:** percentage of existing clusters that get toggled to Canvas view at least once.
+- **Canvas adoption:** percentage of collections toggled to Canvas view at least once.
 
 ---
 
@@ -226,15 +226,15 @@ This is the "taste dossier" moment. Any element on your canvas is one click away
 
 ## Open Questions
 
-1. **Naming.** Shipping as "Canvas" inside Cosmos for now. Worth a naming pass before launch if Cosmos wants a sharper label.
+1. **Naming.** "Canvas" is the working name. Worth a naming pass before launch.
 2. **Canvas-Grid cross-view consistency.** If a user selects or rearranges nodes in Canvas, does Grid reflect any of that state? Recommend: ordering in Canvas has no effect on Grid in MVP; they share content, not layout.
 3. **Annotation persistence across views.** Annotations written in Canvas should be visible in Grid too (on hover or expansion). Needs a Grid-side design pass.
-4. **Public canvas attribution.** Public view should show the owner's name and a subtle Cosmos Canvas badge. Exact treatment is a design call.
+4. **Public canvas attribution.** Public view should show the owner's name and a subtle Taste Canvas badge. Exact treatment is a design call.
 5. **Reflection Mode validation.** On-by-default in this draft. Will be validated with real users via the MVP itself.
 
 ### Resolved
 
-- **Pricing.** Free for all Cosmos users in MVP.
+- **Pricing.** Free in MVP.
 - **View toggle.** Tab component between Grid (masonry, 4 columns) and Canvas.
 - **Search.** Keyword search on titles and annotations in MVP. Semantic search in v2.
 - **Privacy and discovery.** Public/private toggle per canvas, private by default. Link-only access in MVP. Name-based discovery in v2.

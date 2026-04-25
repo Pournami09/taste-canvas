@@ -1,6 +1,6 @@
 # Taste Canvas
 
-A spatial, connected, annotated map of taste. Pitched as a new "Canvas" view mode for taste curation tools like Cosmos and Are.na: same cluster data, new lens.
+A spatial, connected, annotated map of taste. Turn a collection of saved references from a flat grid into an infinite canvas for reflection and connection.
 
 Designers paste references onto an infinite pan-and-zoomable surface, connect them, and answer "why does this resonate?" The reflection layer is the differentiator.
 

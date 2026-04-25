@@ -122,7 +122,7 @@
 - **FR-10.2** Public canvases generate a stable URL: `app.tld/{slug}/{canvas-id}` or similar.
 - **FR-10.3** Public view is read-only: pan, zoom, click-to-expand. No edit affordances. No paste. No connect.
 - **FR-10.4** Public view shows attribution: "By [name]" with avatar, top-left or top-right.
-- **FR-10.5** Public view shows a small Cosmos Canvas badge for attribution back to the product.
+- **FR-10.5** Public view shows a small Taste Canvas badge for attribution back to the product.
 - **FR-10.6** Toggling a public canvas to private → existing public URL returns a "This canvas is private" page (not 404).
 - **FR-10.7** OG tags for public canvas URLs: title = canvas title, image = canvas cover, description = "A taste canvas by [name]."
 
@@ -268,9 +268,9 @@ The product is **canvas-first**. There is no top bar or persistent sidebar. The 
 ### UI-9: Public Canvas View
 
 - **UI-9.1** Identical Canvas/Grid rendering minus all edit affordances.
-- **UI-9.2** Top bar shows: "[Canvas Title] by [Name]" + Cosmos Canvas badge.
+- **UI-9.2** Top bar shows: "[Canvas Title] by [Name]" + Taste Canvas badge.
 - **UI-9.3** No sidebar.
-- **UI-9.4** Footer: small "Made with Cosmos Canvas" CTA link.
+- **UI-9.4** Footer: small "Made with Taste Canvas" CTA link.
 
 ### UI-10: Motion
 
@@ -366,7 +366,7 @@ The single navigation surface. Replaces the top bar and sidebar from typical web
 - **UI-16.4** Open animation: scale 0.96 → 1.0 + opacity 0 → 1, duration 140ms, ease-out-cubic. Origin top-right (anchors to the avatar).
 - **UI-16.5** Close: click outside, Esc, or click the avatar again.
 - **UI-16.6** Keyboard: Tab traverses sections, Up/Down within canvas list, Enter to activate.
-- **UI-16.7** When viewing a public canvas (not the owner), the AppMenu is replaced by a smaller "Made with Cosmos Canvas" link or a "Sign in" affordance. Owner-only items are hidden.
+- **UI-16.7** When viewing a public canvas (not the owner), the AppMenu is replaced by a smaller "Made with Taste Canvas" link or a "Sign in" affordance. Owner-only items are hidden.
 
 ---
 
@@ -379,7 +379,7 @@ Three layers, strictly enforced.
 **Layer 1 — Primitive (raw values, no semantics)**
 - `color.gray.50` … `color.gray.950` (cool, slightly desaturated neutrals)
 - `color.warm.50` … `color.warm.950` (warm beige/cream family for light-mode surfaces)
-- `color.orange.50` … `color.orange.950` (Cosmos-inspired warm accent; primary brand color)
+- `color.orange.50` … `color.orange.950` (warm accent; primary brand color)
 - `color.red.50` … `color.red.950` (destructive)
 - `color.green.50` … `color.green.950` (success)
 - `space.0` … `space.32` (4px scale: 0, 2, 4, 6, 8, 12, 16, 20, 24, 32, 40, 48, 64)
@@ -715,13 +715,13 @@ These are remaining questions to resolve. The big architectural and visual ones 
 
 ### Resolved
 
-- **Pricing.** Free for all Cosmos users in MVP.
+- **Pricing.** Free in MVP.
 - **View toggle.** Bottom-center pill, Canvas | Grid (matches design).
 - **Search.** Keyword search on titles and annotations in MVP. Semantic search in v2.
 - **Privacy and discovery.** Public/private toggle per canvas, private by default. Link-only access in MVP. Name-based discovery in v2.
 - **Reflection Mode default.** On, validated post-launch.
 - **Grid columns.** 3 columns (revised from 4 to match Figma).
-- **Accent color.** Warm orange (revised from blue to match Figma's Cosmos warmth).
+- **Accent color.** Warm orange (revised from blue to match Figma's warm palette).
 - **App-level navigation surface.** Top-right AppMenu (UI-16) handles canvas switching, title editing, share, settings. No top bar, no sidebar.
 - **Connection rendering (Canvas).** Endpoint dots always visible in `accent.default`. Lines render only on hover/click of either endpoint node or the line itself.
 - **Connection endpoint dots (Grid).** `border.strong` (dark grey) by default, shift to `accent.default` (orange) on item hover.
