@@ -1,0 +1,150 @@
+/* Layer 1: Primitive tokens — raw values only, no semantics */
+
+:root {
+  /* --- Absolute values --- */
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* --- Gray scale (cool, slightly desaturated) --- */
+  --color-gray-50: #f8f8f8;
+  --color-gray-100: #f0f0f0;
+  --color-gray-200: #e0e0e2;
+  --color-gray-300: #c4c4c8;
+  --color-gray-400: #9a9aa0;
+  --color-gray-500: #7a7a82;
+  --color-gray-600: #4a4a52;
+  --color-gray-700: #3a3a42;
+  --color-gray-750: #34343a;
+  --color-gray-800: #262629;
+  --color-gray-850: #1c1c1f;
+  --color-gray-900: #161618;
+  --color-gray-950: #121212;
+
+  /* --- Warm scale (beige/cream, for light-mode surfaces) --- */
+  --color-warm-50: #faf7f2;
+  --color-warm-100: #f2eee7;
+  --color-warm-200: #e6e0d6;
+  --color-warm-300: #d6cebe;
+  --color-warm-400: #c4b8a6;
+  --color-warm-500: #a8967e;
+  --color-warm-600: #8c7a64;
+  --color-warm-700: #6e5e4a;
+  --color-warm-800: #4e4236;
+  --color-warm-900: #2e2620;
+  --color-warm-950: #1a1512;
+
+  /* --- Orange scale (warm accent, primary brand color) --- */
+  --color-orange-50: #fff5ee;
+  --color-orange-100: #ffe8d5;
+  --color-orange-200: #ffd0a8;
+  --color-orange-300: #ffb47a;
+  --color-orange-400: #ff9a58;
+  --color-orange-500: #ff8d46;
+  --color-orange-600: #e67030;
+  --color-orange-700: #c45820;
+  --color-orange-800: #a04418;
+  --color-orange-900: #7a3410;
+  --color-orange-950: #3d1a08;
+
+  /* --- Red scale (destructive) --- */
+  --color-red-50: #fff1f0;
+  --color-red-100: #ffe2df;
+  --color-red-200: #ffbbb5;
+  --color-red-300: #ff9089;
+  --color-red-400: #ff6059;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+  --color-red-700: #b91c1c;
+  --color-red-800: #991b1b;
+  --color-red-900: #7f1d1d;
+  --color-red-950: #450a0a;
+
+  /* --- Green scale (success) --- */
+  --color-green-50: #f0fdf4;
+  --color-green-100: #dcfce7;
+  --color-green-200: #bbf7d0;
+  --color-green-300: #86efac;
+  --color-green-400: #4ade80;
+  --color-green-500: #22c55e;
+  --color-green-600: #16a34a;
+  --color-green-700: #15803d;
+  --color-green-800: #166534;
+  --color-green-900: #14532d;
+  --color-green-950: #052e16;
+
+  /* --- Alpha aliases (for glass surfaces) --- */
+  --alpha-white-06: rgba(255, 255, 255, 0.06);
+  --alpha-black-04: rgba(0, 0, 0, 0.04);
+
+  /* --- Spacing scale (4px base) --- */
+  --space-0: 0px;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* --- Radius --- */
+  --radius-none: 0px;
+  --radius-xs: 5px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* --- Typography: font families --- */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* --- Typography: font sizes --- */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+  --font-size-2xl: 28px;
+  --font-size-3xl: 36px;
+
+  /* --- Typography: font weights --- */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  /* --- Typography: line heights --- */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+
+  /* --- Typography: letter spacing --- */
+  --letter-spacing-tight: -0.01em;
+  --letter-spacing-normal: 0em;
+  --letter-spacing-wide: 0.04em;
+  --letter-spacing-wider: 0.08em;
+
+  /* --- Shadows --- */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.16), 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.28), 0 8px 16px rgba(0, 0, 0, 0.16);
+
+  /* --- Motion: durations --- */
+  --motion-duration-micro: 80ms;
+  --motion-duration-small: 140ms;
+  --motion-duration-medium: 200ms;
+  --motion-duration-large: 320ms;
+
+  /* --- Motion: easings (cubic) --- */
+  --motion-easing-in: cubic-bezier(0.4, 0, 1, 1);
+  --motion-easing-out: cubic-bezier(0, 0, 0.2, 1);
+  --motion-easing-inout: cubic-bezier(0.4, 0, 0.2, 1);
+}

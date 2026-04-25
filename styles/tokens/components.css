@@ -1,0 +1,91 @@
+/* Layer 3: Component tokens — per-component bindings, reading only from semantic */
+
+:root {
+  /* --- Button --- */
+  --button-primary-bg: var(--accent-default);
+  --button-primary-bg-hover: var(--accent-hover);
+  --button-primary-fg: var(--text-inverse);
+  --button-secondary-bg: var(--surface-raised);
+  --button-secondary-bg-hover: var(--surface-subtle);
+  --button-secondary-fg: var(--text-primary);
+  --button-secondary-border: var(--border-default);
+  --button-ghost-bg-hover: var(--surface-raised);
+  --button-ghost-fg: var(--text-secondary);
+  --button-destructive-bg: var(--destructive-default);
+  --button-destructive-bg-hover: var(--destructive-hover);
+  --button-destructive-fg: var(--text-inverse);
+
+  /* --- IconButton --- */
+  --icon-button-bg: var(--surface-raised);
+  --icon-button-bg-hover: var(--surface-subtle);
+  --icon-button-fg: var(--text-secondary);
+  --icon-button-fg-hover: var(--text-primary);
+  --icon-button-border: var(--border-subtle);
+
+  /* --- Input --- */
+  --input-bg: var(--surface-raised);
+  --input-border: var(--border-default);
+  --input-border-focus: var(--border-focus);
+  --input-fg: var(--text-primary);
+  --input-placeholder: var(--text-tertiary);
+
+  /* --- Node --- */
+  --node-bg: var(--surface-raised);
+  --node-border: var(--border-default);
+  --node-border-selected: var(--border-focus);
+  --node-shadow: var(--shadow-sm);
+
+  /* --- AnnotationCard --- */
+  --annotation-card-bg: var(--surface-raised-glass);
+  --annotation-card-border: transparent;
+  --annotation-card-border-editing: var(--accent-default);
+  --annotation-card-label-color: var(--text-tertiary);
+  --annotation-card-body-color: var(--text-secondary);
+
+  /* --- HoverToolbar --- */
+  --hover-toolbar-button-bg: var(--surface-raised);
+  --hover-toolbar-button-bg-hover: var(--surface-subtle);
+  --hover-toolbar-button-fg: var(--text-secondary);
+  --hover-toolbar-button-fg-hover: var(--text-primary);
+  --hover-toolbar-button-border: var(--border-subtle);
+
+  /* --- Connection --- */
+  --connection-stroke: var(--border-strong);
+  --connection-stroke-hover: var(--accent-default);
+  --connection-dot: var(--accent-default);
+  --connection-dot-grid: var(--border-strong);
+
+  /* --- Tab (ViewTogglePill) --- */
+  --tab-active-bg: var(--surface-subtle);
+  --tab-active-fg: var(--text-primary);
+  --tab-inactive-fg: var(--text-secondary);
+  --tab-pill-bg: var(--surface-raised);
+  --tab-pill-border: var(--border-subtle);
+
+  /* --- Overlay (expanded node) --- */
+  --overlay-scrim: var(--surface-overlay);
+  --overlay-bg: var(--surface-raised);
+  --overlay-border: var(--border-subtle);
+
+  /* --- Avatar --- */
+  --avatar-bg: var(--surface-raised);
+  --avatar-fg: var(--text-primary);
+  --avatar-ring: var(--border-default);
+  --avatar-ring-active: var(--accent-default);
+
+  /* --- Badge --- */
+  --badge-bg: var(--surface-raised);
+  --badge-fg: var(--text-secondary);
+  --badge-border: var(--border-subtle);
+
+  /* --- AppMenu --- */
+  --app-menu-bg: var(--surface-raised);
+  --app-menu-border: var(--border-subtle);
+
+  /* --- ProfileBlock chip --- */
+  --chip-bg: var(--surface-raised);
+  --chip-fg: var(--text-chip);
+  --chip-border: var(--border-subtle);
+  --chip-border-hover: var(--border-default);
+  --chip-fg-hover: var(--text-primary);
+}

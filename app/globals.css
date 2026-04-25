@@ -1,0 +1,104 @@
+@import "tailwindcss";
+@import "../styles/tokens/primitives.css";
+@import "../styles/tokens/semantic.css";
+@import "../styles/tokens/components.css";
+
+/* Dark mode via data-theme attribute on <html> */
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+/* Bridge CSS vars to Tailwind v4 utility classes */
+@theme inline {
+  /* Fonts */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Radius: rounded-xs, rounded-sm, rounded-md, rounded-lg, rounded-xl, rounded-full */
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-full: var(--radius-full);
+
+  /* Surfaces: bg-surface-background, bg-surface-subtle, etc. */
+  --color-surface-background: var(--surface-background);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-raised-glass: var(--surface-raised-glass);
+  --color-surface-overlay: var(--surface-overlay);
+
+  /* Borders: border-border-subtle, border-border-default, etc. */
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-border-focus: var(--border-focus);
+
+  /* Text: text-text-primary, text-text-secondary, etc. */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-chip: var(--text-chip);
+  --color-text-inverse: var(--text-inverse);
+
+  /* Accent */
+  --color-accent-default: var(--accent-default);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-subtle: var(--accent-subtle);
+
+  /* States */
+  --color-destructive-default: var(--destructive-default);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-success-default: var(--success-default);
+  --color-dot-grid: var(--dot-grid-color);
+
+  /* Component tokens as utilities */
+  --color-annotation-card-bg: var(--annotation-card-bg);
+  --color-hover-toolbar-button-bg: var(--hover-toolbar-button-bg);
+  --color-hover-toolbar-button-fg: var(--hover-toolbar-button-fg);
+
+  /* shadcn compatibility: maps shadcn utility names to our semantic vars */
+  --color-background: var(--surface-background);
+  --color-foreground: var(--text-primary);
+  --color-card: var(--surface-raised);
+  --color-card-foreground: var(--text-primary);
+  --color-popover: var(--surface-raised);
+  --color-popover-foreground: var(--text-primary);
+  --color-primary: var(--accent-default);
+  --color-primary-foreground: var(--text-inverse);
+  --color-secondary: var(--surface-subtle);
+  --color-secondary-foreground: var(--text-primary);
+  --color-muted: var(--surface-raised);
+  --color-muted-foreground: var(--text-secondary);
+  --color-accent: var(--surface-raised);
+  --color-accent-foreground: var(--text-primary);
+  --color-destructive: var(--destructive-default);
+  --color-border: var(--border-default);
+  --color-input: var(--border-subtle);
+  --color-ring: var(--border-focus);
+
+  /* Shadows */
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+}
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--surface-background);
+    color: var(--text-primary);
+    min-height: 100dvh;
+  }
+}
