@@ -1,4 +1,4 @@
-# Cosmos Canvas
+# Taste Canvas
 
 A spatial, connected, annotated map of taste. Pitched as a new "Canvas" view mode for taste curation tools like Cosmos and Are.na: same cluster data, new lens.
 
