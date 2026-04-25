@@ -1,8 +1,8 @@
 # Cosmos Canvas
 
-A spatial, connected, annotated map of taste. Pitched as a new "Canvas" view mode for Cosmos.so: same cluster data, new lens.
+A spatial, connected, annotated map of taste. Pitched as a new "Canvas" view mode for taste curation tools like Cosmos and Are.na: same cluster data, new lens.
 
-Designers paste references onto an infinite pan-and-zoomable surface, connect them Obsidian-style, and answer "why does this resonate?" The reflection layer is the differentiator vs Are.na, Pinterest, Milanote.
+Designers paste references onto an infinite pan-and-zoomable surface, connect them, and answer "why does this resonate?" The reflection layer is the differentiator.
 
 ## Status
 
