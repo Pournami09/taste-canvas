@@ -26,6 +26,9 @@
   --color-surface-raised: var(--surface-raised);
   --color-surface-raised-glass: var(--surface-raised-glass);
   --color-surface-overlay: var(--surface-overlay);
+  --color-surface-tab-active: var(--surface-tab-active);
+  --color-surface-tab-pill: var(--surface-tab-pill);
+  --color-surface-chip: var(--surface-chip);
 
   /* Borders: border-border-subtle, border-border-default, etc. */
   --color-border-subtle: var(--border-subtle);
@@ -83,6 +86,35 @@
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+/* Overlay scale-in: used by ExpandedOverlay, ReflectionPrompt, SearchPalette */
+@keyframes overlayIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Panel drop-in: used by AppMenuPanel */
+@keyframes panelIn {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
+
+/* Side panel slide-in from right: used by ExpandedOverlay */
+@keyframes slideInFromRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 @layer base {

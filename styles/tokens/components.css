@@ -56,7 +56,7 @@
   --connection-dot-grid: var(--border-strong);
 
   /* --- Tab (ViewTogglePill) --- */
-  --tab-active-bg: var(--surface-subtle);
+  --tab-active-bg: var(--surface-tab-active);
   --tab-active-fg: var(--text-primary);
   --tab-inactive-fg: var(--text-secondary);
   --tab-pill-bg: var(--surface-raised);
@@ -83,9 +83,29 @@
   --app-menu-border: var(--border-subtle);
 
   /* --- ProfileBlock chip --- */
-  --chip-bg: var(--surface-raised);
+  --chip-bg: var(--surface-chip);
   --chip-fg: var(--text-chip);
   --chip-border: var(--border-subtle);
   --chip-border-hover: var(--border-default);
   --chip-fg-hover: var(--text-primary);
+
+  /* --- Embed Attribution --- */
+  --embed-attribution-bg: var(--surface-raised);
+  --embed-attribution-border: var(--border-subtle);
+  --embed-attribution-fg: var(--text-secondary);
+  --embed-attribution-fg-muted: var(--text-tertiary);
+  --embed-attribution-avatar-bg: var(--surface-subtle);
+  --embed-attribution-avatar-fg: var(--text-primary);
+
+  /* --- Grid View --- */
+  /* Outer gap: space between separate card groups (annotation bottom to next card top). */
+  --grid-gap: 20px;
+  /* Inner gap: space between an image/link card and its own annotation card below it. */
+  --grid-inner-gap: 6px;
+  /* Column gap: horizontal gutter between the 4 masonry columns. */
+  --grid-col-gap: 16px;
+  /* Max width for the 4-column layout at comfortable reading density. */
+  --grid-max-width: 1400px;
+  /* Outer horizontal padding for the grid container. */
+  --grid-padding-x: 32px;
 }

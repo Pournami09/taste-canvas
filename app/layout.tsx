@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { noFlashScript } from "@/lib/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,9 +22,9 @@ export default function RootLayout({
       className={`${GeistSans.variable} ${GeistMono.variable}`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: noFlashScript }} />
+        <Script src="/no-flash.js" strategy="beforeInteractive" />
       </head>
-      <body>
+      <body className="tc-root">
         <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>

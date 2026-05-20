@@ -33,6 +33,7 @@ const navSections = [
     items: [
       { href: "/design-system/components/hover-toolbar", label: "HoverToolbar" },
       { href: "/design-system/components/annotation-card", label: "AnnotationCard" },
+      { href: "/design-system/components/view-toggle-pill", label: "ViewTogglePill" },
     ],
   },
 ];

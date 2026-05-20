@@ -33,6 +33,11 @@
   --success-default: var(--color-green-500);
   --warning-default: var(--color-orange-400);
 
+  /* --- Interactive surfaces --- */
+  --surface-tab-active: var(--color-gray-700);
+  --surface-tab-pill: var(--surface-subtle);
+  --surface-chip: var(--alpha-white-12);
+
   /* --- Canvas texture --- */
   --dot-grid-color: var(--color-gray-800);
 }
@@ -69,6 +74,11 @@
   --destructive-hover: var(--color-red-700);
   --success-default: var(--color-green-600);
   --warning-default: var(--color-orange-600);
+
+  /* --- Interactive surfaces --- */
+  --surface-tab-active: var(--color-white);
+  --surface-tab-pill: var(--color-warm-200);
+  --surface-chip: var(--color-warm-200);
 
   /* --- Canvas texture --- */
   --dot-grid-color: var(--color-warm-200);
