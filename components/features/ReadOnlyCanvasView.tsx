@@ -67,6 +67,10 @@ export function ReadOnlyCanvasView({
   const pendingNodeId = useRef<string | null>(null);
   const draggingNodeId = useRef<string | null>(null);
 
+  // Z-index stacking: most recently dragged node stays on top
+  const zCounter = useRef(1);
+  const [zLayers, setZLayers] = useState<Map<string, number>>(new Map());
+
   // Resolve position: override if viewer dragged, otherwise original
   function nodePos(node: CanvasNode): { x: number; y: number } {
     const ov = posOverrides.get(node.id);
@@ -161,6 +165,11 @@ export function ReadOnlyCanvasView({
       if (pendingNodeId.current) {
         draggingNodeId.current = pendingNodeId.current;
         setIsDraggingNode(true);
+        // Bring this node to front
+        zCounter.current += 1;
+        const nodeId = pendingNodeId.current;
+        const z = zCounter.current;
+        setZLayers((prev) => { const next = new Map(prev); next.set(nodeId, z); return next; });
       } else {
         setIsPanning(true);
       }
@@ -345,7 +354,7 @@ export function ReadOnlyCanvasView({
                 left: pos.x,
                 top: pos.y,
                 cursor: isBeingDragged ? "grabbing" : "grab",
-                zIndex: isBeingDragged ? 10 : 1,
+                zIndex: zLayers.get(node.id) ?? 1,
                 transition: isBeingDragged ? "none" : "left 0.22s ease, top 0.22s ease",
               }}
             >
