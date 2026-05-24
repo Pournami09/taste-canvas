@@ -38,3 +38,8 @@ coverage/
 # Misc
 *.pem
 .cache/
+tsconfig.tsbuildinfo
+.Rhistory
+
+# Logbook (local only)
+docs/logbook/

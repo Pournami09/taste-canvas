@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownUp } from "lucide-react";
+import { ArrowDownUp, Plus, LayoutDashboard, Code, Keyboard } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { ProfileBlock } from "@/components/features/ProfileBlock";
 import { ViewTogglePill, type View } from "@/components/features/ViewTogglePill";
@@ -14,7 +14,8 @@ import { ExpandedOverlay } from "@/components/features/ExpandedOverlay";
 import { AppMenuPanel } from "@/components/features/AppMenuPanel";
 import { SearchPalette } from "@/components/features/SearchPalette";
 import { ShortcutsSheet } from "@/components/features/ShortcutsSheet";
-import { useAutoSave, type SaveStatus } from "@/lib/hooks/use-auto-save";
+import { OnboardingSpotlight } from "@/components/features/OnboardingSpotlight";
+import { useAutoSave } from "@/lib/hooks/use-auto-save";
 import { useSignedUrls } from "@/lib/hooks/use-signed-urls";
 import { uploadImageToR2 } from "@/lib/upload";
 import { createClient } from "@/lib/supabase/client";
@@ -1095,10 +1096,21 @@ function CanvasView({
               position: "absolute", inset: 0,
               display: "flex", flexDirection: "column",
               alignItems: "center", justifyContent: "center",
-              gap: 12,
+              gap: 20,
               pointerEvents: "none",
             }}
           >
+            <p
+              style={{
+                fontFamily: "var(--font-sans)",
+                fontSize: "var(--font-size-xl)",
+                fontWeight: 600,
+                color: "var(--text-primary)",
+                opacity: 0.7,
+              }}
+            >
+              Taste Canvas
+            </p>
             <p
               style={{
                 fontFamily: "var(--font-sans)",
@@ -1111,14 +1123,78 @@ function CanvasView({
             </p>
             <p
               style={{
-                fontFamily: "var(--font-mono)",
+                fontFamily: "var(--font-sans)",
                 fontSize: "var(--font-size-sm)",
                 color: "var(--text-tertiary)",
                 opacity: 0.6,
               }}
             >
-              Cmd+V
+              Images, links, and videos.
             </p>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minWidth: 24,
+                height: 22,
+                padding: "0 8px",
+                borderRadius: "var(--radius-xs)",
+                background: "var(--surface-raised)",
+                border: "1px solid var(--border-default)",
+                fontFamily: "var(--font-mono)",
+                fontSize: "12px",
+                color: "var(--text-secondary)",
+                lineHeight: 1,
+                marginTop: 4,
+              }}
+            >
+              Cmd+V
+            </span>
+
+            {/* Feature hint cards */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "130px 130px",
+                gap: 12,
+                marginTop: 12,
+              }}
+            >
+              {([
+                { icon: <Plus size={16} />, label: "Create canvases" },
+                { icon: <LayoutDashboard size={16} />, label: "Switch to grid" },
+                { icon: <Code size={16} />, label: "Embed canvas" },
+                { icon: <Keyboard size={16} />, label: "Shortcuts  ?" },
+              ] as const).map((hint, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: 16,
+                    borderRadius: "var(--radius-md)",
+                    background: "var(--surface-raised)",
+                    border: "1px solid var(--border-subtle)",
+                    opacity: 0.5,
+                  }}
+                >
+                  <div style={{ color: "var(--text-tertiary)" }}>{hint.icon}</div>
+                  <p
+                    style={{
+                      fontFamily: "var(--font-sans)",
+                      fontSize: "var(--font-size-xs)",
+                      color: "var(--text-tertiary)",
+                      textAlign: "center",
+                    }}
+                  >
+                    {hint.label}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -1696,43 +1772,6 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
   );
 }
 
-// ---------------------------------------------------------------------------
-// Save status indicator
-// ---------------------------------------------------------------------------
-
-function SaveIndicator({ status }: { status: SaveStatus }) {
-  if (status === "idle") return null;
-
-  const label =
-    status === "saving" ? "Saving..." :
-    status === "saved"  ? "Saved" :
-    "Save failed";
-
-  const color =
-    status === "error" ? "var(--status-error)" : "var(--text-tertiary)";
-
-  return (
-    <div
-      className="tc-save-indicator"
-      style={{
-        position: "fixed",
-        top: 28,
-        left: "50%",
-        transform: "translateX(-50%)",
-        fontFamily: "var(--font-mono)",
-        fontSize: "var(--font-size-xs)",
-        color,
-        letterSpacing: "var(--letter-spacing-wide)",
-        opacity: status === "saved" ? 0.6 : 1,
-        transition: "opacity 0.3s ease",
-        zIndex: 200,
-        pointerEvents: "none",
-      }}
-    >
-      {label}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // CanvasClient (main exported component, receives data from server)
@@ -1756,7 +1795,7 @@ export function CanvasClient({
   const { resolveUrl, signKey } = useSignedUrls(nodes, initialSignedUrls);
 
   // Auto-save
-  const saveStatus = useAutoSave(canvas.id, nodes, edges);
+  useAutoSave(canvas.id, nodes, edges);
 
   // Track current theme for Toaster (always start "dark" to match SSR)
   const [currentTheme, setCurrentTheme] = useState<"light" | "dark">("dark");
@@ -1779,8 +1818,23 @@ export function CanvasClient({
   const [reflectionMode, setReflectionMode]             = useState(profile.reflection_mode);
   const [showSearch, setShowSearch]                     = useState(false);
   const [showShortcuts, setShowShortcuts]               = useState(false);
+  const [showOnboarding, setShowOnboarding]             = useState(false);
   const [canvasTitle, setCanvasTitle]                   = useState(canvas.title);
   const [localCanvasList, setLocalCanvasList]           = useState(canvasList);
+
+  // Auto-show onboarding on first visit
+  useEffect(() => {
+    const completed = localStorage.getItem("tc-onboarding-completed");
+    if (!completed) {
+      const timer = setTimeout(() => setShowOnboarding(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleOnboardingComplete = useCallback(() => {
+    localStorage.setItem("tc-onboarding-completed", "1");
+    setShowOnboarding(false);
+  }, []);
 
   // Persist canvas title changes immediately
   const handleTitleChange = useCallback(
@@ -1919,6 +1973,7 @@ export function CanvasClient({
 
       // Esc: close overlays in order of precedence
       if (e.key === "Escape") {
+        if (showOnboarding) { handleOnboardingComplete(); return; }
         if (showShortcuts) { setShowShortcuts(false); return; }
         if (showSearch) { setShowSearch(false); return; }
         if (pendingReflectionNodeId) { setPendingReflectionNodeId(null); return; }
@@ -1959,7 +2014,7 @@ export function CanvasClient({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showShortcuts, showSearch, expandedNodeId, pendingReflectionNodeId, checkpoint]);
+  }, [showShortcuts, showSearch, expandedNodeId, pendingReflectionNodeId, showOnboarding, handleOnboardingComplete, checkpoint]);
 
   // Clear selection on view change
   useEffect(() => { setSelectedIds(new Set()); }, [view]);
@@ -2017,6 +2072,171 @@ export function CanvasClient({
     setExpandedNodeId(nodeId);
     setSelectedIds(new Set([nodeId]));
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // Grid-view paste handler (CanvasView has its own; this covers grid view)
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    function handleGridPaste(e: ClipboardEvent) {
+      if (viewRef.current !== "grid") return;
+
+      const active = document.activeElement;
+      if (active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT")) return;
+
+      if (nodesRef.current.length >= NODE_CAP) {
+        toast.error("30-node limit reached. Remove a node or start a new canvas.");
+        return;
+      }
+
+      const items = Array.from(e.clipboardData?.items ?? []);
+
+      // Default canvas position: place near center, collision resolution handles overlaps
+      const cx = 0;
+      const cy = 0;
+
+      // Pasted image file
+      const imageItem = items.find((item) => item.type.startsWith("image/"));
+      if (imageItem) {
+        const file = imageItem.getAsFile();
+        if (file) {
+          toast.promise(
+            uploadImageToR2(file).then(async ({ key }) => {
+              const signedUrl = await signKey(key);
+              const probe = new window.Image();
+              probe.onload = () => {
+                const w = Math.min(probe.naturalWidth, 600);
+                const h = Math.round((probe.naturalHeight / probe.naturalWidth) * w);
+                const nodeId = crypto.randomUUID();
+                checkpoint();
+                setNodes((prev) => {
+                  const newNode: ImageNode = {
+                    id: nodeId, type: "image", src: key, alt: "Pasted image",
+                    canvasX: cx - Math.round(w / 2), canvasY: cy - Math.round(h / 2),
+                    canvasW: w, canvasH: h, annotation: "", createdAt: Date.now(),
+                  };
+                  return resolveCollisions([newNode, ...prev], new Set([nodeId]));
+                });
+                handleNodeCreated(nodeId);
+              };
+              probe.onerror = () => {
+                const nodeId = crypto.randomUUID();
+                checkpoint();
+                setNodes((prev) => {
+                  const newNode: ImageNode = {
+                    id: nodeId, type: "image", src: key, alt: "Pasted image",
+                    canvasX: cx - 200, canvasY: cy - 150, canvasW: 400, canvasH: 300,
+                    annotation: "", createdAt: Date.now(),
+                  };
+                  return resolveCollisions([newNode, ...prev], new Set([nodeId]));
+                });
+                handleNodeCreated(nodeId);
+              };
+              probe.src = signedUrl;
+            }),
+            {
+              loading: "Uploading image...",
+              success: "Image uploaded",
+              error: "Upload failed",
+            }
+          );
+          return;
+        }
+      }
+
+      // Pasted text (URL or plain text)
+      const textItem = items.find((item) => item.type === "text/plain");
+      if (textItem) {
+        textItem.getAsString((raw) => {
+          const text = raw.trim();
+          if (!text) return;
+
+          let isUrl = false;
+          try {
+            const u = new URL(text);
+            isUrl = u.protocol === "http:" || u.protocol === "https:";
+          } catch { /* not a URL */ }
+
+          if (isUrl) {
+            // Duplicate URL detection
+            const existing = nodesRef.current.find(
+              (n) => n.type === "link" && (n as LinkNode).url === text
+            );
+            if (existing) {
+              toast("Already on canvas.", { duration: 3000 });
+              return;
+            }
+
+            if (isDirectImageUrl(text)) {
+              const probe = new window.Image();
+              probe.crossOrigin = "anonymous";
+              probe.onload = () => {
+                const w = Math.min(probe.naturalWidth || 400, 600);
+                const h = probe.naturalHeight && probe.naturalWidth
+                  ? Math.round((probe.naturalHeight / probe.naturalWidth) * w)
+                  : Math.round(w * 0.75);
+                const nodeId = crypto.randomUUID();
+                checkpoint();
+                setNodes((prev) => {
+                  const newNode: ImageNode = {
+                    id: nodeId, type: "image", src: text,
+                    alt: new URL(text).pathname.split("/").pop() || "Image",
+                    canvasX: cx - Math.round(w / 2), canvasY: cy - Math.round(h / 2),
+                    canvasW: w, canvasH: h, annotation: "", createdAt: Date.now(),
+                  };
+                  return resolveCollisions([newNode, ...prev], new Set([nodeId]));
+                });
+                handleNodeCreated(nodeId);
+              };
+              probe.onerror = () => {
+                const nodeId = crypto.randomUUID();
+                checkpoint();
+                setNodes((prev) => {
+                  const newNode: ImageNode = {
+                    id: nodeId, type: "image", src: text,
+                    alt: new URL(text).pathname.split("/").pop() || "Image",
+                    canvasX: cx - 200, canvasY: cy - 150,
+                    canvasW: 400, canvasH: 300, annotation: "", createdAt: Date.now(),
+                  };
+                  return resolveCollisions([newNode, ...prev], new Set([nodeId]));
+                });
+                handleNodeCreated(nodeId);
+              };
+              probe.src = text;
+            } else {
+              const nodeId = crypto.randomUUID();
+              checkpoint();
+              setNodes((prev) => {
+                const newNode: LinkNode = {
+                  id: nodeId, type: "link", url: text,
+                  canvasX: cx - Math.round(LINK_CARD_W / 2), canvasY: cy - 120,
+                  canvasW: LINK_CARD_W, annotation: "",
+                  preview: null, loading: true, fetchError: false, createdAt: Date.now(),
+                };
+                return resolveCollisions([newNode, ...prev], new Set([nodeId]));
+              });
+              fetchLinkPreview(nodeId, text, setNodes);
+              handleNodeCreated(nodeId);
+            }
+          } else {
+            const nodeId = crypto.randomUUID();
+            checkpoint();
+            setNodes((prev) => {
+              const newNode: AnnotationNode = {
+                id: nodeId, type: "annotation", body: text,
+                canvasX: cx - 144, canvasY: cy - 60, createdAt: Date.now(),
+              };
+              return resolveCollisions([newNode, ...prev], new Set([nodeId]));
+            });
+            handleNodeCreated(nodeId);
+          }
+        });
+      }
+    }
+
+    window.addEventListener("paste", handleGridPaste);
+    return () => window.removeEventListener("paste", handleGridPaste);
+  }, [setNodes, checkpoint, signKey, handleNodeCreated]);
 
   // ---------------------------------------------------------------------------
   // Render
@@ -2102,8 +2322,6 @@ export function CanvasClient({
         </div>
       </div>
 
-      {/* Save indicator */}
-      <SaveIndicator status={saveStatus} />
 
       {/* Top-right: AppMenu */}
       <AppMenuPanel
@@ -2114,6 +2332,7 @@ export function CanvasClient({
         reflectionMode={reflectionMode}
         onReflectionModeChange={handleReflectionModeChange}
         onShowShortcuts={() => setShowShortcuts(true)}
+        onShowOnboarding={() => setShowOnboarding(true)}
         canvasList={localCanvasList}
         currentCanvasId={canvas.id}
         profileId={profile.id}
@@ -2155,6 +2374,11 @@ export function CanvasClient({
       {/* Shortcuts sheet */}
       {showShortcuts && (
         <ShortcutsSheet onClose={() => setShowShortcuts(false)} />
+      )}
+
+      {/* Onboarding spotlight tour */}
+      {showOnboarding && (
+        <OnboardingSpotlight onComplete={handleOnboardingComplete} />
       )}
     </div>
   );

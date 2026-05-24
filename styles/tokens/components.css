@@ -97,6 +97,15 @@
   --embed-attribution-avatar-bg: var(--surface-subtle);
   --embed-attribution-avatar-fg: var(--text-primary);
 
+  /* --- OnboardingSpotlight --- */
+  --onboarding-tooltip-bg: var(--surface-raised);
+  --onboarding-tooltip-border: var(--border-subtle);
+  --onboarding-tooltip-shadow: var(--shadow-xl);
+  --onboarding-spotlight-ring: var(--accent-default);
+  --onboarding-dot-active: var(--accent-default);
+  --onboarding-dot-inactive: var(--border-default);
+  --onboarding-scrim: var(--surface-overlay);
+
   /* --- Grid View --- */
   /* Outer gap: space between separate card groups (annotation bottom to next card top). */
   --grid-gap: 20px;
