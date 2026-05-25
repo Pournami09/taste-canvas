@@ -143,7 +143,15 @@ export function ReadOnlyCanvasView({
 
     // Detect if the pointer landed on a node
     const nodeEl = target.closest("[data-node-id]") as HTMLElement | null;
-    pendingNodeId.current = nodeEl ? nodeEl.getAttribute("data-node-id") : null;
+    const nodeId = nodeEl ? nodeEl.getAttribute("data-node-id") : null;
+    pendingNodeId.current = nodeId;
+
+    // Bring clicked node to front immediately
+    if (nodeId) {
+      zCounter.current += 1;
+      const z = zCounter.current;
+      setZLayers((prev) => { const next = new Map(prev); next.set(nodeId, z); return next; });
+    }
 
     panStart.current = { x: e.clientX, y: e.clientY };
     lastPos.current = { x: e.clientX, y: e.clientY };
@@ -165,11 +173,6 @@ export function ReadOnlyCanvasView({
       if (pendingNodeId.current) {
         draggingNodeId.current = pendingNodeId.current;
         setIsDraggingNode(true);
-        // Bring this node to front
-        zCounter.current += 1;
-        const nodeId = pendingNodeId.current;
-        const z = zCounter.current;
-        setZLayers((prev) => { const next = new Map(prev); next.set(nodeId, z); return next; });
       } else {
         setIsPanning(true);
       }
