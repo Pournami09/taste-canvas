@@ -4,7 +4,6 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDownUp, Plus, LayoutDashboard, Code, Keyboard } from "lucide-react";
 import { toast, Toaster } from "sonner";
-import { ProfileBlock } from "@/components/features/ProfileBlock";
 import { ViewTogglePill, type View } from "@/components/features/ViewTogglePill";
 import { AnnotationCard } from "@/components/features/AnnotationCard";
 import { HoverToolbar } from "@/components/features/HoverToolbar";
@@ -2298,26 +2297,12 @@ export function CanvasClient({
         <div
           className="tc-page__bottom-chrome-inner"
           style={{
-            display: "flex", alignItems: "flex-end", justifyContent: "space-between",
+            display: "flex", alignItems: "flex-end", justifyContent: "center",
             width: "100%",
           }}
         >
-          <div className="tc-page__profile-slot" style={{ pointerEvents: "auto" }}>
-            <ProfileBlock
-              name={profile.display_name}
-              role={profile.role}
-              chips={profile.external_links}
-            />
-          </div>
           <div className="tc-page__view-toggle-slot" style={{ pointerEvents: "auto" }}>
             <ViewTogglePill value={view} onChange={handleViewChange} />
-          </div>
-          <div className="tc-page__spacer" style={{ visibility: "hidden", pointerEvents: "none" }}>
-            <ProfileBlock
-              name={profile.display_name}
-              role={profile.role}
-              chips={profile.external_links}
-            />
           </div>
         </div>
       </div>
