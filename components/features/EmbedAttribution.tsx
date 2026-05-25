@@ -6,9 +6,9 @@ type EmbedAttributionProps = {
 };
 
 export function EmbedAttribution({ displayName, avatarUrl }: EmbedAttributionProps) {
-  const initials = displayName
-    .split(" ")
-    .filter(Boolean)
+  const nameParts = displayName.split(" ").filter(Boolean);
+  const firstName = nameParts[0] ?? "Unknown";
+  const initials = nameParts
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("") || "U";
@@ -28,7 +28,7 @@ export function EmbedAttribution({ displayName, avatarUrl }: EmbedAttributionPro
         background: "var(--embed-attribution-bg)",
         border: "1px solid var(--embed-attribution-border)",
         borderRadius: "var(--radius-full)",
-        boxShadow: "var(--shadow-md)",
+        boxShadow: "none",
         pointerEvents: "auto",
       }}
     >
@@ -68,29 +68,16 @@ export function EmbedAttribution({ displayName, avatarUrl }: EmbedAttributionPro
       )}
 
       {/* Text */}
-      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-        <span
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: "var(--font-size-xs)",
-            color: "var(--embed-attribution-fg)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          By {displayName}
-        </span>
-        <span
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "10px",
-            color: "var(--embed-attribution-fg-muted)",
-            letterSpacing: "var(--letter-spacing-wide)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Taste Canvas
-        </span>
-      </div>
+      <span
+        style={{
+          fontFamily: "var(--font-sans)",
+          fontSize: "var(--font-size-xs)",
+          color: "var(--embed-attribution-fg)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {firstName}&apos;s Taste Canvas
+      </span>
     </div>
   );
 }
