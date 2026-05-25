@@ -14,16 +14,10 @@ type ProfileBlockProps = {
   className?: string;
 };
 
-export function ProfileBlock({ name, role, chips = [], className }: ProfileBlockProps) {
+export function ProfileBlock({ role, chips = [], className }: ProfileBlockProps) {
   return (
     <div className={cn("tc-profile-block flex flex-col gap-5", className)}>
       <div className="flex flex-col">
-        <span
-          className="tc-profile-block__name font-sans font-medium text-text-primary capitalize leading-normal"
-          style={{ fontSize: "var(--font-size-xl)" }}
-        >
-          {name}
-        </span>
         <span
           className="tc-profile-block__title font-sans font-normal text-text-secondary leading-normal"
           style={{ fontSize: "var(--font-size-md)" }}
