@@ -123,6 +123,7 @@ function CanvasKebabMenu({
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [embedTheme, setEmbedTheme] = useState<"dark" | "light">("dark");
   const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
@@ -159,7 +160,7 @@ function CanvasKebabMenu({
 
   function copyEmbedCode() {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const snippet = `<iframe src="${origin}/embed/${canvas.id}" width="100%" height="500" style="border:none;border-radius:8px;" loading="lazy"></iframe>`;
+    const snippet = `<iframe src="${origin}/embed/${canvas.id}?theme=${embedTheme}" width="100%" height="500" style="border:none;border-radius:8px;" loading="lazy"></iframe>`;
     navigator.clipboard.writeText(snippet).then(() => {
       setCopied(true);
       setTimeout(() => { setCopied(false); setOpen(false); }, 1200);
@@ -237,17 +238,73 @@ function CanvasKebabMenu({
             {canvas.visibility === "public" ? "Make private" : "Make public"}
           </button>
 
-          {/* Copy embed code (only when public) */}
+          {/* Embed section (only when public) */}
           {canvas.visibility === "public" && (
-            <button
-              onClick={copyEmbedCode}
-              style={dropdownItemStyle}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--surface-subtle)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-            >
-              <Code size={12} />
-              {copied ? "Copied!" : "Copy embed code"}
-            </button>
+            <>
+              {/* Embed theme selector */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "4px 8px",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "var(--font-size-xs)",
+                    color: "var(--text-tertiary)",
+                    marginRight: "auto",
+                  }}
+                >
+                  Embed theme
+                </span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setEmbedTheme("dark"); }}
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "var(--font-size-xs)",
+                    padding: "2px 8px",
+                    borderRadius: "var(--radius-sm)",
+                    border: "1px solid",
+                    borderColor: embedTheme === "dark" ? "var(--accent-default)" : "var(--border-subtle)",
+                    background: embedTheme === "dark" ? "var(--accent-default)" : "transparent",
+                    color: embedTheme === "dark" ? "var(--text-inverse)" : "var(--text-tertiary)",
+                    cursor: "pointer",
+                    transition: "all var(--motion-duration-small) var(--motion-easing-out)",
+                  }}
+                >
+                  Dark
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setEmbedTheme("light"); }}
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "var(--font-size-xs)",
+                    padding: "2px 8px",
+                    borderRadius: "var(--radius-sm)",
+                    border: "1px solid",
+                    borderColor: embedTheme === "light" ? "var(--accent-default)" : "var(--border-subtle)",
+                    background: embedTheme === "light" ? "var(--accent-default)" : "transparent",
+                    color: embedTheme === "light" ? "var(--text-inverse)" : "var(--text-tertiary)",
+                    cursor: "pointer",
+                    transition: "all var(--motion-duration-small) var(--motion-easing-out)",
+                  }}
+                >
+                  Light
+                </button>
+              </div>
+              <button
+                onClick={copyEmbedCode}
+                style={dropdownItemStyle}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--surface-subtle)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+              >
+                <Code size={12} />
+                {copied ? "Copied!" : "Copy embed code"}
+              </button>
+            </>
           )}
 
           {/* Divider */}

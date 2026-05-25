@@ -11,10 +11,15 @@ import { EmbedPrivate } from "./EmbedPrivate";
 
 export default async function EmbedPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ canvasId: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { canvasId } = await params;
+  const resolvedSearchParams = await searchParams;
+  const themeParam = resolvedSearchParams.theme;
+  const embedTheme = themeParam === "light" ? "light" : "dark";
   const supabase = await createClient();
 
   // 1. Load canvas (RLS allows anon read on public canvases)
@@ -85,6 +90,7 @@ export default async function EmbedPage({
       ownerName={ownerName}
       ownerAvatarUrl={ownerAvatarUrl}
       initialSignedUrls={initialSignedUrls}
+      theme={embedTheme}
     />
   );
 }

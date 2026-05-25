@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ReadOnlyCanvasView } from "@/components/features/ReadOnlyCanvasView";
 import { EmbedAttribution } from "@/components/features/EmbedAttribution";
 import { ExpandedOverlay } from "@/components/features/ExpandedOverlay";
@@ -14,6 +14,7 @@ type EmbedClientProps = {
   ownerName: string;
   ownerAvatarUrl: string | null;
   initialSignedUrls: Record<string, string>;
+  theme: "light" | "dark";
 };
 
 export function EmbedClient({
@@ -23,7 +24,13 @@ export function EmbedClient({
   ownerName,
   ownerAvatarUrl,
   initialSignedUrls,
+  theme,
 }: EmbedClientProps) {
+  // Force the embed theme (overrides localStorage/system preference)
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
   const { resolveUrl } = usePublicSignedUrls(canvasId, nodes, initialSignedUrls);
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
 
