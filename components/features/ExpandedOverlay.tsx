@@ -281,7 +281,7 @@ export function ExpandedOverlay({
                 }}
               >
                 <ExternalLink size={11} />
-                Open original
+                Open {(() => { try { return new URL((node as LinkNode).url).hostname.replace(/^www\./, ""); } catch { return (node as LinkNode).url; } })()}
               </a>
             </div>
           ) : (
