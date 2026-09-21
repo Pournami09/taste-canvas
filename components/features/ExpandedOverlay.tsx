@@ -4,7 +4,8 @@ import { useEffect, useRef } from "react";
 import { X, ExternalLink } from "lucide-react";
 import { AnnotationCard } from "./AnnotationCard";
 import { LinkPreviewCard } from "./LinkPreviewCard";
-import type { CanvasNode, Edge } from "@/lib/canvas-types";
+import type { CanvasNode, LinkNode, Edge } from "@/lib/canvas-types";
+import { parseTweetId } from "@/lib/twitter";
 
 type ExpandedOverlayProps = {
   node: CanvasNode;
@@ -247,7 +248,21 @@ export function ExpandedOverlay({
             />
           ) : node.type === "link" ? (
             <div className="tc-expanded-overlay__media-link" style={{ width: "100%", padding: "20px" }}>
-              <LinkPreviewCard data={node.preview} fetchError={node.fetchError} width="100%" />
+              <LinkPreviewCard data={node.preview} fetchError={node.fetchError} width="100%" url={node.url} />
+              {/* Tweet text shown in expanded overlay */}
+              {parseTweetId(node.url) && (node as LinkNode).preview?.description && (
+                <p
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "var(--font-size-sm)",
+                    color: "var(--text-secondary)",
+                    lineHeight: "var(--line-height-normal)",
+                    marginTop: 12,
+                  }}
+                >
+                  {(node as LinkNode).preview!.description}
+                </p>
+              )}
               <a
                 className="tc-expanded-overlay__open-original"
                 href={node.url}

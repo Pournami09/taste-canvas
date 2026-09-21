@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parseTweetId } from "@/lib/twitter";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -56,6 +57,36 @@ export async function GET(request: NextRequest) {
     }
   } catch {
     return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+  }
+
+  // Twitter/X: use fxtwitter API for reliable metadata
+  const tweetId = parseTweetId(targetUrl.href);
+  if (tweetId) {
+    try {
+      const fxRes = await fetch(`https://api.fxtwitter.com/status/${tweetId}`, {
+        headers: { "User-Agent": "TasteCanvas/1.0" },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (fxRes.ok) {
+        const json = await fxRes.json();
+        const tweet = json.tweet;
+        if (tweet) {
+          // Prefer actual video URL (mp4) over thumbnail for playback
+          const videoUrl = tweet.media?.videos?.[0]?.url ?? "";
+          const photoUrl = tweet.media?.photos?.[0]?.url ?? "";
+          const ogImage = videoUrl || photoUrl;
+          return NextResponse.json({
+            url: targetUrl.href,
+            title: tweet.author?.name ?? "",
+            description: tweet.text ?? "",
+            ogImage,
+            siteName: "X",
+          });
+        }
+      }
+    } catch {
+      // Fall through to generic fetch
+    }
   }
 
   try {

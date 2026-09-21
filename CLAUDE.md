@@ -46,6 +46,7 @@ These override defaults. Do not violate them.
 - Phase 5: auth, database, image storage.
 - Phase 6: sharing (public read-only routes plus OG tags), Are.na import.
 - Phase 7: search, settings, polish, accessibility audit.
+- Phase 8: Chrome (MV3) browser extension for quick-add from any page. New product surface. Spec in FR-16 / UI-17; full plan in `docs/phase_8_browser_extension_plan.md`. Prerequisite: move auto-save off full-replace to granular per-node mutations.
 
 Stay strictly in phase scope. Phase 1 explicitly excludes auth, DB, image upload, link previews, react-flow, paste handling, sharing, Are.na import, search, settings page.
 

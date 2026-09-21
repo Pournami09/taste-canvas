@@ -177,6 +177,23 @@
 - **FR-15.8** Canvas-at-cap: paste is blocked, message: "30-node limit reached. Remove a node or start a new canvas."
 - **FR-15.9** Public-canvas-not-found: clean error page, link back to the user's profile.
 
+### FR-16: Browser Extension (Quick Add)
+
+> Phase 8. New product surface. Full architecture, integration points, and open decisions live in `docs/phase_8_browser_extension_plan.md`. This section is the checklist; that doc is the rationale.
+
+- **FR-16.1** A Chrome (Manifest V3) extension lets a signed-in user save web media into one of their existing boards without navigating to the canvas.
+- **FR-16.2** Context menu: a "Save to Taste Canvas" right-click action is available on any page, image, link, or text selection. Image saves create image nodes, links and pages create link nodes, selections create annotation nodes.
+- **FR-16.3** Hover quick-add: a floating add button appears over eligible media (image, GIF, video, tweet) on hover, tuned for X/Twitter, Instagram, Pinterest, and Are.na first, with a generic image fallback elsewhere above a minimum size threshold.
+- **FR-16.4** Videos and GIFs that are not stored as files are saved as a link node with the thumbnail and source URL. Tweets are saved as a link node to the tweet URL so the OG card renders. No scraping.
+- **FR-16.5** A save targets the active board selected in the toolbar popup. The destination board name is shown before and after the save.
+- **FR-16.6** On-page feedback after a successful save: a transient "Saved to {board name}" toast with an Open link, plus a toolbar badge flash. No navigation required.
+- **FR-16.7** Error states surfaced on-page: board at 30-node cap, not connected (prompt to connect), and image fetch or upload failure.
+- **FR-16.8** Auth uses a connect handshake that hands the extension a Supabase session token; the extension authenticates API calls with a bearer token. The web app's cookie session is not weakened.
+- **FR-16.9** Saves go through a bearer-authenticated `/api/extension/*` layer that enforces ownership, the 30-node and 2-canvas caps, image upload to R2, and link-preview fetching server-side.
+- **FR-16.10** Prerequisite: canvas persistence must move off the full-replace auto-save to granular per-node mutations so an external append is not clobbered; the open canvas merges external inserts live via Supabase Realtime.
+- **FR-16.11** The extension captures nothing until the user explicitly saves. No passive scraping.
+- **FR-16.12** Out of scope for v1: creating a new board from the extension, editing annotations or connections, raw video file storage, bulk capture, and non-Chromium browsers.
+
 ---
 
 ## Part 2 — UI Requirements
@@ -367,6 +384,16 @@ The single navigation surface. Replaces the top bar and sidebar from typical web
 - **UI-16.5** Close: click outside, Esc, or click the avatar again.
 - **UI-16.6** Keyboard: Tab traverses sections, Up/Down within canvas list, Enter to activate.
 - **UI-16.7** When viewing a public canvas (not the owner), the AppMenu is replaced by a smaller "Made with Taste Canvas" link or a "Sign in" affordance. Owner-only items are hidden.
+
+### UI-17: Browser Extension Surfaces
+
+> Phase 8. See `docs/phase_8_browser_extension_plan.md`. All injected UI lives in a Shadow DOM root so the host page cannot style or break it, and it cannot leak styles into the host page.
+
+- **UI-17.1** Toolbar popup: opens below the toolbar icon. Shows connection state, a board picker (up to 2 boards) with live node counts (for example "Untitled 12/30"), and a link to open the web app. Empty, loading, and error states per FR-15 parity.
+- **UI-17.2** Quick-add button: a small circular add affordance overlaid on the hovered media, shown on mouseover and hidden on mouseout, repositioned on scroll. High z-index, Shadow DOM isolated.
+- **UI-17.3** Save toast: transient "Saved to {board name}" with the Taste Canvas mark and an Open link, auto-dismiss around 3 seconds. Dark-first, motion snappy not bouncy, matching the product.
+- **UI-17.4** Visual language reuses the token values via a static snippet generated from the primitive and semantic layers (the one scoped exception to runtime token resolution, since an extension cannot read the app's CSS variables). Regenerate when tokens change.
+- **UI-17.5** Popup is keyboard navigable: Tab through controls, Up/Down within the board list, Enter to select.
 
 ---
 
