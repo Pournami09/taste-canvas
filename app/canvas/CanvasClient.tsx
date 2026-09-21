@@ -416,11 +416,80 @@ function LinkNodeView({ node, isSelected, isConnecting, onAnnotationSave, onConn
             left: "100%",
             paddingLeft: 12,
             zIndex: 10,
+            width: 289 + 12,
             opacity: showOverlay ? 1 : 0,
             pointerEvents: showOverlay ? "auto" : "none",
             transition: "opacity 0.15s ease",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
           }}
         >
+          {/* Preview info panel: site name, title, description */}
+          {node.preview && !node.loading && !node.fetchError && (
+            <div
+              className="tc-link-node__preview-info"
+              style={{
+                width: 289,
+                background: "var(--annotation-card-bg)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                borderRadius: "var(--radius-xs)",
+                padding: 16,
+              }}
+            >
+              <p
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "var(--font-size-xs)",
+                  color: "var(--accent-default)",
+                  textTransform: "uppercase",
+                  letterSpacing: "var(--letter-spacing-wide)",
+                  marginBottom: 6,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {node.preview.siteName}
+              </p>
+              {node.preview.title && (
+                <p
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "var(--font-size-base)",
+                    fontWeight: 500,
+                    color: "var(--text-primary)",
+                    lineHeight: "var(--line-height-tight)",
+                    marginBottom: node.preview.description ? 6 : 0,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {node.name ?? node.preview.title}
+                </p>
+              )}
+              {node.preview.description && (
+                <p
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "var(--font-size-sm)",
+                    color: "var(--text-secondary)",
+                    lineHeight: "var(--line-height-normal)",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {node.preview.description}
+                </p>
+              )}
+            </div>
+          )}
+
           <AnnotationCard
             initialBody={node.annotation}
             onSave={onAnnotationSave}

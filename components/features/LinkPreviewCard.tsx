@@ -62,16 +62,11 @@ export function LinkPreviewCard({
       <div className="tc-link-preview tc-link-preview__skeleton" style={cardStyle}>
         <div
           style={{
-            height: 140,
+            height: 160,
             background: "var(--surface-raised)",
             animation: "shimmer 1.6s ease-in-out infinite",
           }}
         />
-        <div style={{ padding: "12px 16px" }}>
-          <Bone w={64} h={8} mb={10} />
-          <Bone w="80%" h={12} mb={6} />
-          <Bone w="60%" h={10} />
-        </div>
       </div>
     );
   }
@@ -115,7 +110,7 @@ export function LinkPreviewCard({
   return (
     <div className="tc-link-preview" style={cardStyle}>
       {/* OG image */}
-      {showImage && (
+      {showImage ? (
         <img
           className="tc-link-preview__image"
           src={data.ogImage}
@@ -129,69 +124,33 @@ export function LinkPreviewCard({
             pointerEvents: "none",
           }}
         />
-      )}
-
-      {/* Text content */}
-      <div className="tc-link-preview__text" style={{ padding: "12px 16px" }}>
-        {/* Site name */}
-        <p
-          className="tc-link-preview__site-name"
+      ) : (
+        /* No image: compact domain strip so the card has visual presence */
+        <div
+          className="tc-link-preview__domain-strip"
           style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "var(--font-size-xs)",
-            color: "var(--accent-default)",
-            textTransform: "uppercase",
-            letterSpacing: "var(--letter-spacing-wide)",
-            marginBottom: 6,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
+            padding: "12px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
           }}
         >
-          {data.siteName}
-        </p>
-
-        {/* Title */}
-        {data.title && (
           <p
-            className="tc-link-preview__title"
             style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "var(--font-size-base)",
-              fontWeight: 500,
-              color: "var(--text-primary)",
-              lineHeight: "var(--line-height-tight)",
-              marginBottom: data.description ? 6 : 0,
-              // Clamp to 2 lines
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--accent-default)",
+              textTransform: "uppercase",
+              letterSpacing: "var(--letter-spacing-wide)",
               overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
-            {data.title}
+            {data.siteName}
           </p>
-        )}
-
-        {/* Description */}
-        {data.description && (
-          <p
-            className="tc-link-preview__description"
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "var(--font-size-sm)",
-              color: "var(--text-secondary)",
-              lineHeight: "var(--line-height-normal)",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
-            {data.description}
-          </p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
