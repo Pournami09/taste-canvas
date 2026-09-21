@@ -18,6 +18,7 @@ export type ImageNode = {
   canvasW: number;
   canvasH: number;
   annotation: string;
+  tags: string[];
   createdAt: number;
 };
 
@@ -27,6 +28,7 @@ export type AnnotationNode = {
   body: string;
   canvasX: number;
   canvasY: number;
+  tags: string[];
   createdAt: number;
 };
 
@@ -43,6 +45,7 @@ export type LinkNode = {
   preview: LinkPreviewData | null;
   loading: boolean;
   fetchError: boolean;
+  tags: string[];
   createdAt: number;
 };
 
@@ -55,6 +58,7 @@ export type VideoNode = {
   canvasW: number;
   canvasH: number;
   annotation: string;
+  tags: string[];
   createdAt: number;
 };
 

@@ -35,6 +35,7 @@ export type DbCanvasNode = {
   preview_og_image: string | null;
   preview_site_name: string | null;
   fetch_error: boolean;
+  tags: string[];
 };
 
 export type DbCanvasEdge = {
@@ -87,6 +88,7 @@ export function dbNodeToClient(row: DbCanvasNode): CanvasNode {
         canvasW: row.canvas_w ?? 400,
         canvasH: row.canvas_h ?? 300,
         annotation: row.annotation,
+        tags: row.tags ?? [],
         createdAt,
       } satisfies ImageNode;
 
@@ -97,6 +99,7 @@ export function dbNodeToClient(row: DbCanvasNode): CanvasNode {
         body: row.body ?? "",
         canvasX: row.canvas_x,
         canvasY: row.canvas_y,
+        tags: row.tags ?? [],
         createdAt,
       } satisfies AnnotationNode;
 
@@ -122,6 +125,7 @@ export function dbNodeToClient(row: DbCanvasNode): CanvasNode {
             : null,
         loading: false,
         fetchError: row.fetch_error,
+        tags: row.tags ?? [],
         createdAt,
       } satisfies LinkNode;
 
@@ -135,6 +139,7 @@ export function dbNodeToClient(row: DbCanvasNode): CanvasNode {
         canvasW: row.canvas_w ?? 480,
         canvasH: row.canvas_h ?? 270,
         annotation: row.annotation,
+        tags: row.tags ?? [],
         createdAt,
       } satisfies VideoNode;
   }
@@ -178,6 +183,7 @@ export function clientNodeToDb(
     preview_og_image: null as string | null,
     preview_site_name: null as string | null,
     fetch_error: false,
+    tags: [] as string[],
   };
 
   switch (node.type) {
@@ -189,12 +195,14 @@ export function clientNodeToDb(
         canvas_w: node.canvasW,
         canvas_h: node.canvasH,
         annotation: node.annotation,
+        tags: node.tags,
       };
 
     case "annotation":
       return {
         ...base,
         body: node.body,
+        tags: node.tags,
       };
 
     case "link":
@@ -209,6 +217,7 @@ export function clientNodeToDb(
         preview_og_image: node.preview?.ogImage ?? null,
         preview_site_name: node.preview?.siteName ?? null,
         fetch_error: node.fetchError,
+        tags: node.tags,
       };
 
     case "video":
@@ -218,6 +227,7 @@ export function clientNodeToDb(
         canvas_w: node.canvasW,
         canvas_h: node.canvasH,
         annotation: node.annotation,
+        tags: node.tags,
       };
   }
 }

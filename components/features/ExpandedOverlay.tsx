@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { X, ExternalLink } from "lucide-react";
 import { AnnotationCard } from "./AnnotationCard";
 import { LinkPreviewCard } from "./LinkPreviewCard";
+import { TagInput } from "./TagInput";
 import type { CanvasNode, LinkNode, Edge } from "@/lib/canvas-types";
 import { parseTweetId } from "@/lib/twitter";
 
@@ -15,6 +16,8 @@ type ExpandedOverlayProps = {
   onClose: () => void;
   onAnnotationSave: (nodeId: string, body: string) => void;
   onNavigate: (nodeId: string) => void;
+  onTagsSave: (nodeId: string, tags: string[]) => void;
+  allCanvasTags: string[];
   readOnly?: boolean;
 };
 
@@ -138,6 +141,8 @@ export function ExpandedOverlay({
   onClose,
   onAnnotationSave,
   onNavigate,
+  onTagsSave,
+  allCanvasTags,
   readOnly = false,
 }: ExpandedOverlayProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -335,6 +340,37 @@ export function ExpandedOverlay({
               onSave={(body) => onAnnotationSave(node.id, body)}
               cardStyle={{ width: "100%" }}
               hideToolbar
+            />
+          </div>
+        )}
+
+        {/* Tags section */}
+        {(!readOnly || node.tags.length > 0) && (
+          <div
+            className="tc-expanded-overlay__tags"
+            style={{
+              borderTop: "1px solid var(--border-subtle)",
+              padding: "14px 20px",
+              flexShrink: 0,
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--font-size-xs)",
+                color: "var(--text-tertiary)",
+                letterSpacing: "var(--letter-spacing-wide)",
+                textTransform: "uppercase",
+                marginBottom: 10,
+              }}
+            >
+              Tags
+            </p>
+            <TagInput
+              tags={node.tags}
+              allCanvasTags={allCanvasTags}
+              onChange={(tags) => onTagsSave(node.id, tags)}
+              readOnly={readOnly}
             />
           </div>
         )}

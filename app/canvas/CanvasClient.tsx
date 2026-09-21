@@ -15,6 +15,7 @@ import { SearchPalette } from "@/components/features/SearchPalette";
 import { ShortcutsSheet } from "@/components/features/ShortcutsSheet";
 import { OnboardingSpotlight } from "@/components/features/OnboardingSpotlight";
 import { BookmarkImportDialog } from "@/components/features/BookmarkImportDialog";
+import { TagFilterBar, TagChip } from "@/components/features/TagFilterBar";
 import { parseBookmarksHtml } from "@/lib/parse-bookmarks";
 import type { BookmarkFolder, BookmarkItem } from "@/lib/parse-bookmarks";
 import { useAutoSave } from "@/lib/hooks/use-auto-save";
@@ -647,6 +648,7 @@ type CanvasViewProps = {
   onNodeClick: (nodeId: string) => void;
   onNodeCreated: (nodeId: string) => void;
   checkpoint: () => void;
+  activeFilterTags: Set<string>;
 };
 
 const DEFAULT_TRANSFORM = { x: 0, y: 0, scale: 1 };
@@ -664,6 +666,7 @@ function CanvasView({
   onNodeClick,
   onNodeCreated,
   checkpoint,
+  activeFilterTags,
 }: CanvasViewProps) {
   const [transform, setTransform]       = useState(DEFAULT_TRANSFORM);
   const [isDragging, setIsDragging]     = useState(false);
@@ -843,7 +846,7 @@ function CanvasView({
                   const newNode: ImageNode = {
                     id: nodeId, type: "image", src: key, alt: "Pasted image",
                     canvasX: cx - Math.round(w / 2), canvasY: cy - Math.round(h / 2),
-                    canvasW: w, canvasH: h, annotation: "", createdAt: Date.now(),
+                    canvasW: w, canvasH: h, annotation: "", tags: [], createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -856,7 +859,7 @@ function CanvasView({
                   const newNode: ImageNode = {
                     id: nodeId, type: "image", src: key, alt: "Pasted image",
                     canvasX: cx - 200, canvasY: cy - 150, canvasW: 400, canvasH: 300,
-                    annotation: "", createdAt: Date.now(),
+                    annotation: "", tags: [], createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -896,7 +899,7 @@ function CanvasView({
                   const newNode: VideoNode = {
                     id: nodeId, type: "video", src: key,
                     canvasX: cx - Math.round(w / 2), canvasY: cy - Math.round(h / 2),
-                    canvasW: w, canvasH: h, annotation: "", createdAt: Date.now(),
+                    canvasW: w, canvasH: h, annotation: "", tags: [], createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -910,7 +913,7 @@ function CanvasView({
                   const newNode: VideoNode = {
                     id: nodeId, type: "video", src: key,
                     canvasX: cx - 240, canvasY: cy - 135, canvasW: 480, canvasH: 270,
-                    annotation: "", createdAt: Date.now(),
+                    annotation: "", tags: [], createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -976,7 +979,7 @@ function CanvasView({
                     id: nodeId, type: "image", src: text,
                     alt: new URL(text).pathname.split("/").pop() || "Image",
                     canvasX: cx - Math.round(w / 2), canvasY: cy - Math.round(h / 2),
-                    canvasW: w, canvasH: h, annotation: "", createdAt: Date.now(),
+                    canvasW: w, canvasH: h, annotation: "", tags: [], createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -991,7 +994,7 @@ function CanvasView({
                     id: nodeId, type: "image", src: text,
                     alt: new URL(text).pathname.split("/").pop() || "Image",
                     canvasX: cx - 200, canvasY: cy - 150,
-                    canvasW: 400, canvasH: 300, annotation: "", createdAt: Date.now(),
+                    canvasW: 400, canvasH: 300, annotation: "", tags: [], createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -1006,7 +1009,7 @@ function CanvasView({
                   id: nodeId, type: "link", url: text,
                   canvasX: cx - Math.round(LINK_CARD_W / 2), canvasY: cy - 120,
                   canvasW: LINK_CARD_W, annotation: "",
-                  preview: null, loading: true, fetchError: false, createdAt: Date.now(),
+                  preview: null, loading: true, fetchError: false, tags: [], createdAt: Date.now(),
                 };
                 return resolveCollisions([newNode, ...prev], new Set([nodeId]));
               });
@@ -1019,7 +1022,7 @@ function CanvasView({
             setNodes((prev) => {
               const newNode: AnnotationNode = {
                 id: nodeId, type: "annotation", body: text,
-                canvasX: cx - 144, canvasY: cy - 60, createdAt: Date.now(),
+                canvasX: cx - 144, canvasY: cy - 60, tags: [], createdAt: Date.now(),
               };
               return resolveCollisions([newNode, ...prev], new Set([nodeId]));
             });
@@ -1604,6 +1607,9 @@ function CanvasView({
           {/* Nodes */}
           {nodes.map((node) => {
             const isConnected = connectedNodeIds.has(node.id);
+            const isFiltering = activeFilterTags.size > 0;
+            const matchesFilter = !isFiltering || node.tags.some((t) => activeFilterTags.has(t));
+            const nodeW = getNodeRect(node).w;
             return (
               <div
                 className={`tc-canvas__node tc-canvas__node--${node.type}`}
@@ -1616,12 +1622,13 @@ function CanvasView({
                   left: node.canvasX,
                   top: node.canvasY,
                   cursor: "grab",
-                  transition: isDragging ? undefined : "left 0.22s ease, top 0.22s ease",
+                  transition: isDragging
+                    ? "opacity var(--motion-duration-small) var(--motion-easing-out)"
+                    : "left 0.22s ease, top 0.22s ease, opacity var(--motion-duration-small) var(--motion-easing-out)",
                   zIndex: selectedIds.has(node.id) ? 10 : 1,
+                  opacity: matchesFilter ? 1 : 0.15,
                 }}
               >
-
-
                 {node.type === "video" ? (
                   <VideoNodeView
                     node={node}
@@ -1672,6 +1679,27 @@ function CanvasView({
                   />
                 ) : (
                   <AnnotationCard initialBody={node.body} />
+                )}
+
+                {/* Tag chips displayed below node */}
+                {node.tags.length > 0 && (
+                  <div
+                    className="tc-canvas__node-tags"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 4,
+                      paddingTop: 6,
+                      paddingLeft: FRAME_PADDING,
+                      paddingRight: FRAME_PADDING,
+                      maxWidth: nodeW + FRAME_PADDING * 2,
+                    }}
+                  >
+                    {node.tags.map((tag) => (
+                      <TagChip key={tag} label={tag} />
+                    ))}
+                  </div>
                 )}
               </div>
             );
@@ -2284,6 +2312,11 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
                               >
                                 <AnnotationCard initialBody={node.annotation} cardStyle={{ width: "100%" }} hideToolbar />
                               </div>
+                              {node.tags.length > 0 && (
+                                <div className="tc-grid__item-tags" style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                                  {node.tags.map((tag) => <TagChip key={tag} label={tag} />)}
+                                </div>
+                              )}
                             </>
                           ) : node.type === "image" ? (
                             <>
@@ -2321,6 +2354,11 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
                               >
                                 <AnnotationCard initialBody={node.annotation} cardStyle={{ width: "100%" }} hideToolbar />
                               </div>
+                              {node.tags.length > 0 && (
+                                <div className="tc-grid__item-tags" style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                                  {node.tags.map((tag) => <TagChip key={tag} label={tag} />)}
+                                </div>
+                              )}
                             </>
                           ) : node.type === "link" ? (
                             <>
@@ -2367,9 +2405,21 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
                               >
                                 <AnnotationCard initialBody={node.annotation} cardStyle={{ width: "100%" }} hideToolbar />
                               </div>
+                              {node.tags.length > 0 && (
+                                <div className="tc-grid__item-tags" style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                                  {node.tags.map((tag) => <TagChip key={tag} label={tag} />)}
+                                </div>
+                              )}
                             </>
                           ) : (
-                            <AnnotationCard initialBody={node.body} cardStyle={{ width: "100%" }} />
+                            <>
+                              <AnnotationCard initialBody={node.body} cardStyle={{ width: "100%" }} />
+                              {node.tags.length > 0 && (
+                                <div className="tc-grid__item-tags" style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                                  {node.tags.map((tag) => <TagChip key={tag} label={tag} />)}
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                         {isInsertAfterLast && indicatorLine}
@@ -2457,6 +2507,7 @@ export function CanvasClient({
   const [localCanvasList, setLocalCanvasList]           = useState(canvasList);
   const [bookmarkTree, setBookmarkTree]                 = useState<BookmarkFolder | null>(null);
   const bookmarkFileRef                                 = useRef<HTMLInputElement>(null);
+  const [activeFilterTags, setActiveFilterTags]         = useState<Set<string>>(new Set());
 
   // Auto-show onboarding on first visit
   useEffect(() => {
@@ -2587,6 +2638,7 @@ export function CanvasClient({
       preview: null,
       loading: true,
       fetchError: false,
+      tags: [],
       createdAt: Date.now() + i,
     }));
 
@@ -2773,6 +2825,27 @@ export function CanvasClient({
     []
   );
 
+  const handleTagsSave = useCallback((nodeId: string, tags: string[]) => {
+    setNodes((prev) =>
+      prev.map((n) => (n.id === nodeId ? { ...n, tags } as CanvasNode : n))
+    );
+  }, []);
+
+  const handleToggleFilterTag = useCallback((tag: string) => {
+    setActiveFilterTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+      return next;
+    });
+  }, []);
+
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    nodes.forEach((n) => n.tags.forEach((t) => set.add(t)));
+    return [...set].sort();
+  }, [nodes]);
+
   const handleNavigate = useCallback((nodeId: string) => {
     setExpandedNodeId(nodeId);
   }, []);
@@ -2824,7 +2897,7 @@ export function CanvasClient({
                   const newNode: ImageNode = {
                     id: nodeId, type: "image", src: key, alt: "Pasted image",
                     canvasX: cx - Math.round(w / 2), canvasY: cy - Math.round(h / 2),
-                    canvasW: w, canvasH: h, annotation: "", createdAt: Date.now(),
+                    canvasW: w, canvasH: h, annotation: "", tags: [], createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -2837,7 +2910,7 @@ export function CanvasClient({
                   const newNode: ImageNode = {
                     id: nodeId, type: "image", src: key, alt: "Pasted image",
                     canvasX: cx - 200, canvasY: cy - 150, canvasW: 400, canvasH: 300,
-                    annotation: "", createdAt: Date.now(),
+                    annotation: "", tags: [], createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -2877,7 +2950,7 @@ export function CanvasClient({
                   const newNode: VideoNode = {
                     id: nodeId, type: "video", src: key,
                     canvasX: cx - Math.round(w / 2), canvasY: cy - Math.round(h / 2),
-                    canvasW: w, canvasH: h, annotation: "", createdAt: Date.now(),
+                    canvasW: w, canvasH: h, annotation: "", tags: [], createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -2891,7 +2964,7 @@ export function CanvasClient({
                   const newNode: VideoNode = {
                     id: nodeId, type: "video", src: key,
                     canvasX: cx - 240, canvasY: cy - 135, canvasW: 480, canvasH: 270,
-                    annotation: "", createdAt: Date.now(),
+                    annotation: "", tags: [], createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -2948,7 +3021,7 @@ export function CanvasClient({
                     id: nodeId, type: "image", src: text,
                     alt: new URL(text).pathname.split("/").pop() || "Image",
                     canvasX: cx - Math.round(w / 2), canvasY: cy - Math.round(h / 2),
-                    canvasW: w, canvasH: h, annotation: "", createdAt: Date.now(),
+                    canvasW: w, canvasH: h, annotation: "", tags: [], createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -2962,7 +3035,7 @@ export function CanvasClient({
                     id: nodeId, type: "image", src: text,
                     alt: new URL(text).pathname.split("/").pop() || "Image",
                     canvasX: cx - 200, canvasY: cy - 150,
-                    canvasW: 400, canvasH: 300, annotation: "", createdAt: Date.now(),
+                    canvasW: 400, canvasH: 300, annotation: "", tags: [], createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -2977,7 +3050,7 @@ export function CanvasClient({
                   id: nodeId, type: "link", url: text,
                   canvasX: cx - Math.round(LINK_CARD_W / 2), canvasY: cy - 120,
                   canvasW: LINK_CARD_W, annotation: "",
-                  preview: null, loading: true, fetchError: false, createdAt: Date.now(),
+                  preview: null, loading: true, fetchError: false, tags: [], createdAt: Date.now(),
                 };
                 return resolveCollisions([newNode, ...prev], new Set([nodeId]));
               });
@@ -2990,7 +3063,7 @@ export function CanvasClient({
             setNodes((prev) => {
               const newNode: AnnotationNode = {
                 id: nodeId, type: "annotation", body: text,
-                canvasX: cx - 144, canvasY: cy - 60, createdAt: Date.now(),
+                canvasX: cx - 144, canvasY: cy - 60, tags: [], createdAt: Date.now(),
               };
               return resolveCollisions([newNode, ...prev], new Set([nodeId]));
             });
@@ -3037,11 +3110,16 @@ export function CanvasClient({
             onNodeClick={handleNodeClick}
             onNodeCreated={handleNodeCreated}
             checkpoint={checkpoint}
+            activeFilterTags={activeFilterTags}
           />
         ) : (
           <GridView
             canvasId={canvas.id}
-            nodes={nodes}
+            nodes={
+              activeFilterTags.size > 0
+                ? nodes.filter((n) => n.tags.some((t) => activeFilterTags.has(t)))
+                : nodes
+            }
             edges={edges}
             setNodes={setNodes}
             resolveUrl={resolveUrl}
@@ -3085,6 +3163,14 @@ export function CanvasClient({
         aria-hidden="true"
       />
 
+      {/* Tag filter bar: floats top-center when tags exist */}
+      <TagFilterBar
+        allTags={allTags}
+        activeTags={activeFilterTags}
+        onToggleTag={handleToggleFilterTag}
+        onClearAll={() => setActiveFilterTags(new Set())}
+      />
+
       {/* Top-right: AppMenu */}
       <AppMenuPanel
         displayName={profile.display_name}
@@ -3121,6 +3207,8 @@ export function CanvasClient({
           onClose={() => setExpandedNodeId(null)}
           onAnnotationSave={handleAnnotationSave}
           onNavigate={handleNavigate}
+          onTagsSave={handleTagsSave}
+          allCanvasTags={allTags}
         />
       )}
 

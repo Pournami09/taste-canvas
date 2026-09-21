@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { AnnotationCard } from "./AnnotationCard";
 import { LinkPreviewCard } from "./LinkPreviewCard";
+import { TagChip } from "./TagFilterBar";
 import type { CanvasNode, ImageNode, LinkNode, Edge } from "@/lib/canvas-types";
 import { parseTweetId } from "@/lib/twitter";
 
@@ -361,32 +362,53 @@ export function ReadOnlyCanvasView({
               }}
             >
               {node.type === "image" ? (
-                <div style={{ position: "relative", padding: FRAME_PADDING, borderRadius: "var(--radius-lg)" }}>
-                  <img
-                    src={resolveUrl(node.src)}
-                    alt={node.alt}
-                    draggable={false}
-                    style={{
-                      width: node.canvasW,
-                      height: node.canvasH > 0 ? node.canvasH : undefined,
-                      borderRadius: "var(--radius-md)",
-                      objectFit: "cover",
-                      display: "block",
-                      pointerEvents: "none",
-                    }}
-                  />
-                </div>
+                <>
+                  <div style={{ position: "relative", padding: FRAME_PADDING, borderRadius: "var(--radius-lg)" }}>
+                    <img
+                      src={resolveUrl(node.src)}
+                      alt={node.alt}
+                      draggable={false}
+                      style={{
+                        width: node.canvasW,
+                        height: node.canvasH > 0 ? node.canvasH : undefined,
+                        borderRadius: "var(--radius-md)",
+                        objectFit: "cover",
+                        display: "block",
+                        pointerEvents: "none",
+                      }}
+                    />
+                  </div>
+                  {node.tags.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, paddingTop: 6, paddingLeft: FRAME_PADDING, paddingRight: FRAME_PADDING }}>
+                      {node.tags.map((tag) => <TagChip key={tag} label={tag} />)}
+                    </div>
+                  )}
+                </>
               ) : node.type === "link" ? (
-                <div style={{ position: "relative", padding: FRAME_PADDING, borderRadius: "var(--radius-lg)" }}>
-                  <LinkPreviewCard
-                    data={node.preview && node.name ? { ...node.preview, title: node.name } : node.preview}
-                    fetchError={node.fetchError}
-                    width={node.canvasW}
-                    url={node.url}
-                  />
-                </div>
+                <>
+                  <div style={{ position: "relative", padding: FRAME_PADDING, borderRadius: "var(--radius-lg)" }}>
+                    <LinkPreviewCard
+                      data={node.preview && node.name ? { ...node.preview, title: node.name } : node.preview}
+                      fetchError={node.fetchError}
+                      width={node.canvasW}
+                      url={node.url}
+                    />
+                  </div>
+                  {node.tags.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, paddingTop: 6, paddingLeft: FRAME_PADDING, paddingRight: FRAME_PADDING }}>
+                      {node.tags.map((tag) => <TagChip key={tag} label={tag} />)}
+                    </div>
+                  )}
+                </>
               ) : node.type === "annotation" ? (
-                <AnnotationCard initialBody={node.body} readOnly hideToolbar />
+                <>
+                  <AnnotationCard initialBody={node.body} readOnly hideToolbar />
+                  {node.tags.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, paddingTop: 6 }}>
+                      {node.tags.map((tag) => <TagChip key={tag} label={tag} />)}
+                    </div>
+                  )}
+                </>
               ) : null}
 
 

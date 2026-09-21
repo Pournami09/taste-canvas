@@ -110,6 +110,18 @@
   --tweet-card-bg: var(--surface-raised-glass);
   --tweet-card-border: var(--border-subtle);
 
+  /* --- Tag chip --- */
+  --tag-chip-bg: var(--surface-chip);
+  --tag-chip-fg: var(--text-chip);
+  --tag-chip-border: var(--border-subtle);
+  --tag-chip-bg-active: var(--accent-subtle);
+  --tag-chip-fg-active: var(--accent-default);
+  --tag-chip-border-active: var(--accent-default);
+
+  /* --- Tag filter bar --- */
+  --tag-filter-bar-bg: var(--surface-raised);
+  --tag-filter-bar-border: var(--border-subtle);
+
   /* --- Grid View --- */
   /* Outer gap: space between separate card groups (annotation bottom to next card top). */
   --grid-gap: 20px;
