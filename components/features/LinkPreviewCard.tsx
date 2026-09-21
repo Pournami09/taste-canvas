@@ -3,11 +3,15 @@
 import { useState } from "react";
 import type { LinkPreviewData } from "@/lib/canvas-types";
 export type { LinkPreviewData } from "@/lib/canvas-types";
+import { parseTweetId } from "@/lib/twitter";
+import { TweetPreviewCard } from "./TweetPreviewCard";
 
 type LinkPreviewCardProps = {
   data: LinkPreviewData | null; // null while loading
   fetchError?: boolean;
   width?: number | string;
+  /** Raw node URL; used to detect tweet links even before preview data arrives. */
+  url?: string;
 };
 
 // Skeleton block used in the loading state.
@@ -31,8 +35,16 @@ export function LinkPreviewCard({
   data,
   fetchError = false,
   width = 300,
+  url,
 }: LinkPreviewCardProps) {
   const [imgError, setImgError] = useState(false);
+
+  // Delegate to tweet card for Twitter/X URLs
+  const resolvedUrl = data?.url ?? url;
+  const isTweet = resolvedUrl ? parseTweetId(resolvedUrl) !== null : false;
+  if (isTweet && data) {
+    return <TweetPreviewCard data={data} width={width} />;
+  }
 
   const cardStyle: React.CSSProperties = {
     width,

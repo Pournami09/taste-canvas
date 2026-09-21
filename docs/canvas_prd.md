@@ -213,6 +213,7 @@ This is the "taste dossier" moment. Any element on your canvas is one click away
 - **Natural-language cluster queries**: "cluster by yellow", "group by mood", "show me everything that feels soft." This is the headline AI moment.
 - **Labeled connections**: inspires, contrasts with, builds on, same feeling. Unlocks taste-graph queries.
 - **Embeds** on third-party sites. Writers embed research canvases in Substacks, designers embed mood boards in case studies. Live, not snapshot.
+- **Browser extension (quick add)**. Save images, GIFs, video thumbnails, and tweets into a board from any page via a hover button or right-click, with on-page "Saved to {board}" feedback. Planned as Phase 8 (FR-16 / UI-17; `docs/phase_8_browser_extension_plan.md`). Strengthens the capture half of the loop without diluting the reflection layer, which stays in the app.
 - **Semantic search** across annotations and nodes. Query by feeling or concept, not just keyword.
 - **Name-based discovery**. Searching a user's name surfaces their public canvases, building a light social layer on top of reflection.
 

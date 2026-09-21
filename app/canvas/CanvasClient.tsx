@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDownUp, Plus, LayoutDashboard, Code, Keyboard } from "lucide-react";
 import { toast, Toaster } from "sonner";
@@ -14,6 +14,9 @@ import { AppMenuPanel } from "@/components/features/AppMenuPanel";
 import { SearchPalette } from "@/components/features/SearchPalette";
 import { ShortcutsSheet } from "@/components/features/ShortcutsSheet";
 import { OnboardingSpotlight } from "@/components/features/OnboardingSpotlight";
+import { BookmarkImportDialog } from "@/components/features/BookmarkImportDialog";
+import { parseBookmarksHtml } from "@/lib/parse-bookmarks";
+import type { BookmarkFolder, BookmarkItem } from "@/lib/parse-bookmarks";
 import { useAutoSave } from "@/lib/hooks/use-auto-save";
 import { useSignedUrls } from "@/lib/hooks/use-signed-urls";
 import { uploadImageToR2 } from "@/lib/upload";
@@ -21,6 +24,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { CanvasNode, ImageNode, AnnotationNode, LinkNode, Edge } from "@/lib/canvas-types";
 import type { LinkPreviewData } from "@/components/features/LinkPreviewCard";
 import type { DbProfile, DbCanvas } from "@/lib/canvas-db";
+import { parseTweetId } from "@/lib/twitter";
 
 // ---------------------------------------------------------------------------
 // Props from server component
@@ -47,7 +51,7 @@ const MIN_NODE_W      = 80;
 const LINK_CARD_W     = 300;
 const DOUBLE_CLICK_MS = 350;
 const FRAME_PADDING   = 10;
-const NODE_CAP        = 30;
+const NODE_CAP        = 150;
 
 type Corner = "nw" | "ne" | "sw" | "se";
 
@@ -137,6 +141,47 @@ function useHoverWithDelay(delay = 200) {
   );
 
   return { hovered, onMouseEnter, onMouseLeave };
+}
+
+// ---------------------------------------------------------------------------
+// useColumnCount (responsive masonry column count)
+// ---------------------------------------------------------------------------
+
+function useColumnCount(): number {
+  const [count, setCount] = useState(4);
+
+  useEffect(() => {
+    function calc() {
+      const w = window.innerWidth;
+      if (w < 640) return 1;
+      if (w < 768) return 2;
+      if (w < 1024) return 3;
+      return 4;
+    }
+    setCount(calc());
+
+    const mql3 = window.matchMedia("(min-width: 1024px)");
+    const mql2 = window.matchMedia("(min-width: 768px)");
+    const mql1 = window.matchMedia("(min-width: 640px)");
+
+    function onChange() { setCount(calc()); }
+    mql3.addEventListener("change", onChange);
+    mql2.addEventListener("change", onChange);
+    mql1.addEventListener("change", onChange);
+    return () => {
+      mql3.removeEventListener("change", onChange);
+      mql2.removeEventListener("change", onChange);
+      mql1.removeEventListener("change", onChange);
+    };
+  }, []);
+
+  return count;
+}
+
+function distributeToColumns(nodes: CanvasNode[], colCount: number): CanvasNode[][] {
+  const cols: CanvasNode[][] = Array.from({ length: colCount }, () => []);
+  nodes.forEach((n, i) => cols[i % colCount].push(n));
+  return cols;
 }
 
 // ---------------------------------------------------------------------------
@@ -334,7 +379,7 @@ function LinkNodeView({ node, isSelected, isConnecting, onAnnotationSave, onConn
         )}
 
 
-        <LinkPreviewCard data={displayPreview} fetchError={node.fetchError} width={node.canvasW} />
+        <LinkPreviewCard data={displayPreview} fetchError={node.fetchError} width={node.canvasW} url={node.url} />
 
         <div
           className="tc-link-node__toolbar-slot"
@@ -576,7 +621,7 @@ function CanvasView({
       if (active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT")) return;
 
       if (nodesRef.current.length >= NODE_CAP) {
-        toast.error("30-node limit reached. Remove a node or start a new canvas.");
+        toast.error("150-node limit reached. Remove a node or start a new canvas.");
         return;
       }
 
@@ -1391,7 +1436,8 @@ const NODE_GAP = 40;
 function getNodeRect(node: CanvasNode): { x: number; y: number; w: number; h: number } {
   if (node.type === "image") return { x: node.canvasX, y: node.canvasY, w: node.canvasW, h: node.canvasH };
   if (node.type === "link") {
-    const h = !node.preview || node.loading ? 220 : node.preview.ogImage ? 260 : 110;
+    const isTweet = parseTweetId(node.url) !== null;
+    const h = isTweet ? 340 : !node.preview || node.loading ? 220 : node.preview.ogImage ? 260 : 110;
     return { x: node.canvasX, y: node.canvasY, w: node.canvasW, h };
   }
   return { x: node.canvasX, y: node.canvasY, w: 289, h: 110 };
@@ -1490,6 +1536,36 @@ function fetchLinkPreview(
 }
 
 // ---------------------------------------------------------------------------
+// bookmarkGridPositions
+// ---------------------------------------------------------------------------
+
+function bookmarkGridPositions(
+  count: number,
+  centerX: number,
+  centerY: number,
+  cols = 3,
+  cardW = LINK_CARD_W,
+  cardH = 160,
+  gapX = 24,
+  gapY = 24
+): { x: number; y: number }[] {
+  const rows = Math.ceil(count / cols);
+  const totalW = cols * cardW + (cols - 1) * gapX;
+  const totalH = rows * cardH + (rows - 1) * gapY;
+  const startX = centerX - Math.round(totalW / 2);
+  const startY = centerY - Math.round(totalH / 2);
+
+  return Array.from({ length: count }, (_, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    return {
+      x: startX + col * (cardW + gapX),
+      y: startY + row * (cardH + gapY),
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // GridView
 // ---------------------------------------------------------------------------
 
@@ -1502,10 +1578,29 @@ type GridViewProps = {
   onNodeClick: (nodeId: string) => void;
 };
 
+type InsertionIndicator = {
+  type: "horizontal";
+  colIdx: number;
+  position: number;
+} | {
+  type: "vertical";
+  colIdx: number;
+  height: number;
+} | null;
+
+function shallowEqualIndicator(a: InsertionIndicator, b: InsertionIndicator): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.type !== b.type || a.colIdx !== b.colIdx) return false;
+  if (a.type === "horizontal" && b.type === "horizontal") return a.position === b.position;
+  if (a.type === "vertical" && b.type === "vertical") return a.height === b.height;
+  return false;
+}
+
 function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }: GridViewProps) {
   const [sortNewest, setSortNewest] = useState(false);
   const [draggedId, setDraggedId]   = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [insertionIndicator, setInsertionIndicator] = useState<InsertionIndicator>(null);
   const [expandedAnnotations, setExpandedAnnotations] = useState<Set<string>>(
     () => new Set(
       nodes
@@ -1515,6 +1610,12 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
   );
   const dragOccurredRef = useRef(false);
   const gridRef = useRef<HTMLDivElement>(null);
+  const masonryRef = useRef<HTMLDivElement>(null);
+  const columnRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const lastIndicatorRef = useRef<InsertionIndicator>(null);
+  const draggedNodeHeightRef = useRef(200);
+
+  const columnCount = useColumnCount();
 
   // Restore scroll position on mount
   useEffect(() => {
@@ -1541,7 +1642,6 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
     return () => {
       el.removeEventListener("scroll", onScroll);
       if (timer) clearTimeout(timer);
-      // Save on unmount
       sessionStorage.setItem(`tc-grid-scroll-${canvasId}`, String(el.scrollTop));
     };
   }, [canvasId]);
@@ -1566,38 +1666,150 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
     return nodes;
   }, [nodes, sortNewest]);
 
+  const columns = useMemo(
+    () => distributeToColumns(displayNodes, columnCount),
+    [displayNodes, columnCount]
+  );
+
+  // --- Drag handlers ---
+
   function handleDragStart(e: React.DragEvent, id: string) {
     e.dataTransfer.effectAllowed = "move";
     dragOccurredRef.current = true;
     setDraggedId(id);
+    draggedNodeHeightRef.current = (e.currentTarget as HTMLElement).getBoundingClientRect().height;
   }
-  function handleDragOver(e: React.DragEvent, targetId: string) {
+
+  function computeInsertionPosition(clientX: number, clientY: number): InsertionIndicator {
+    const cols = columnRefs.current;
+
+    // Check if cursor is in a column gap
+    for (let i = 0; i < cols.length - 1; i++) {
+      const left = cols[i]?.getBoundingClientRect();
+      const right = cols[i + 1]?.getBoundingClientRect();
+      if (left && right && clientX > left.right && clientX < right.left) {
+        return { type: "vertical", colIdx: i, height: draggedNodeHeightRef.current };
+      }
+    }
+
+    // Find which column
+    for (let colIdx = 0; colIdx < cols.length; colIdx++) {
+      const colRect = cols[colIdx]?.getBoundingClientRect();
+      if (!colRect || clientX < colRect.left || clientX > colRect.right) continue;
+
+      const nodeEls = cols[colIdx]?.querySelectorAll("[data-grid-node]");
+      if (!nodeEls || nodeEls.length === 0) {
+        return { type: "horizontal", colIdx, position: 0 };
+      }
+
+      for (let i = 0; i < nodeEls.length; i++) {
+        const r = nodeEls[i].getBoundingClientRect();
+        const midY = r.top + r.height / 2;
+        if (clientY < midY) {
+          return { type: "horizontal", colIdx, position: i };
+        }
+      }
+
+      return { type: "horizontal", colIdx, position: nodeEls.length };
+    }
+
+    return null;
+  }
+
+  function handleMasonryDragOver(e: React.DragEvent) {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    if (targetId !== draggedId) setDragOverId(targetId);
-  }
-  function handleDrop(e: React.DragEvent, targetId: string) {
-    e.preventDefault();
-    if (!draggedId || draggedId === targetId) { setDraggedId(null); setDragOverId(null); return; }
-    const currentOrder = displayNodes.map((n) => n.id);
-    const from = currentOrder.indexOf(draggedId);
-    const to   = currentOrder.indexOf(targetId);
-    if (from !== -1 && to !== -1) {
-      const reordered = [...currentOrder];
-      reordered.splice(from, 1);
-      reordered.splice(to, 0, draggedId);
-      setNodes((prev) => {
-        const byId = Object.fromEntries(prev.map((n) => [n.id, n]));
-        return reordered.map((id) => byId[id]).filter(Boolean) as CanvasNode[];
-      });
-      setSortNewest(false);
+    if (!draggedId) return;
+
+    const next = computeInsertionPosition(e.clientX, e.clientY);
+    if (!shallowEqualIndicator(lastIndicatorRef.current, next)) {
+      lastIndicatorRef.current = next;
+      setInsertionIndicator(next);
     }
-    setDraggedId(null); setDragOverId(null);
   }
+
+  function handleMasonryDrop(e: React.DragEvent) {
+    e.preventDefault();
+    if (!draggedId || !insertionIndicator || insertionIndicator.type === "vertical") {
+      setDraggedId(null);
+      setInsertionIndicator(null);
+      lastIndicatorRef.current = null;
+      return;
+    }
+
+    const { colIdx, position } = insertionIndicator;
+    const currentOrder = displayNodes.map((n) => n.id);
+    const fromIdx = currentOrder.indexOf(draggedId);
+    if (fromIdx === -1) {
+      setDraggedId(null);
+      setInsertionIndicator(null);
+      lastIndicatorRef.current = null;
+      return;
+    }
+
+    // Map column position to flat index
+    const colNodes = columns[colIdx];
+    const targetNodeId = colNodes?.[position]?.id;
+    let targetFlatIdx = targetNodeId
+      ? currentOrder.indexOf(targetNodeId)
+      : currentOrder.length;
+
+    const reordered = [...currentOrder];
+    reordered.splice(fromIdx, 1);
+    const adjusted = targetFlatIdx > fromIdx ? targetFlatIdx - 1 : targetFlatIdx;
+    reordered.splice(Math.min(adjusted, reordered.length), 0, draggedId);
+
+    setNodes((prev) => {
+      const byId = Object.fromEntries(prev.map((n) => [n.id, n]));
+      return reordered.map((id) => byId[id]).filter(Boolean) as CanvasNode[];
+    });
+    setSortNewest(false);
+    setDraggedId(null);
+    setInsertionIndicator(null);
+    lastIndicatorRef.current = null;
+  }
+
   function handleDragEnd() {
-    setDraggedId(null); setDragOverId(null);
+    setDraggedId(null);
+    setInsertionIndicator(null);
+    lastIndicatorRef.current = null;
     setTimeout(() => { dragOccurredRef.current = false; }, 0);
   }
+
+  function handleMasonryDragLeave(e: React.DragEvent) {
+    const masonry = masonryRef.current;
+    if (!masonry) return;
+    const related = e.relatedTarget as Node | null;
+    if (related && masonry.contains(related)) return;
+    setInsertionIndicator(null);
+    lastIndicatorRef.current = null;
+  }
+
+  // --- Vertical indicator positioning ---
+  const verticalLineStyle = useMemo((): React.CSSProperties | null => {
+    if (!insertionIndicator || insertionIndicator.type !== "vertical") return null;
+    const leftCol = columnRefs.current[insertionIndicator.colIdx];
+    const masonry = masonryRef.current;
+    if (!leftCol || !masonry) return null;
+    const mRect = masonry.getBoundingClientRect();
+    const lRect = leftCol.getBoundingClientRect();
+    return {
+      position: "absolute",
+      left: lRect.right - mRect.left + 7, // center in the gap
+      top: 0,
+      width: "var(--grid-indicator-thickness)",
+      height: insertionIndicator.height,
+      background: "var(--grid-indicator-color)",
+      borderRadius: "var(--radius-full)",
+      opacity: 0.6,
+      pointerEvents: "none",
+      transition: `opacity var(--motion-duration-small) var(--motion-easing-out)`,
+    };
+  }, [insertionIndicator]);
+
+  // --- Render ---
+
+  const hasNodes = displayNodes.length > 0;
 
   return (
     <div
@@ -1607,165 +1819,283 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
         position: "absolute", inset: 0,
         background: "var(--surface-background)",
         overflowY: "auto",
-        backgroundImage: "radial-gradient(circle, var(--dot-grid-color) 1.5px, transparent 1.5px)",
-        backgroundSize: "24px 24px",
       }}
     >
       <div className="tc-grid__container" style={{ maxWidth: "var(--grid-max-width)", margin: "0 auto", padding: "48px var(--grid-padding-x) 160px" }}>
-        {/* Toolbar row */}
-        <div className="tc-grid__toolbar" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
-          <button
-            onClick={() => setSortNewest((v) => !v)}
+        {!hasNodes ? (
+          /* Empty state */
+          <div
+            className="tc-grid__empty-state"
             style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "6px 12px",
-              borderRadius: "var(--radius-sm)",
-              background: sortNewest ? "var(--accent-subtle)" : "var(--surface-raised)",
-              border: `1px solid ${sortNewest ? "var(--accent-default)" : "var(--border-subtle)"}`,
-              color: sortNewest ? "var(--accent-default)" : "var(--text-secondary)",
-              fontFamily: "var(--font-mono)",
-              fontSize: "var(--font-size-xs)",
-              letterSpacing: "var(--letter-spacing-wide)",
-              textTransform: "uppercase",
-              cursor: "pointer",
-              transition: "all var(--motion-duration-small) var(--motion-easing-out)",
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              minHeight: "60vh",
+              gap: 16,
+              pointerEvents: "none",
             }}
           >
-            <ArrowDownUp size={11} />
-            Newest first
-          </button>
-        </div>
-
-        {/* 4-column masonry */}
-        <div
-          className="tc-grid__masonry columns-1 sm:columns-2 md:columns-3 lg:columns-4"
-          style={{ columnGap: "var(--grid-col-gap)" }}
-        >
-          {displayNodes.map((node) => {
-            const annotationOpen = expandedAnnotations.has(node.id);
-            const hasAnnotation  = (node.type === "image" || node.type === "link") && (node as ImageNode | LinkNode).annotation.trim() !== "";
-            const isConnected    = connectedNodeIds.has(node.id);
-
-            return (
-              <div
-                className={`tc-grid__item tc-grid__item--${node.type}`}
-                key={node.id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, node.id)}
-                onDragOver={(e) => handleDragOver(e, node.id)}
-                onDrop={(e) => handleDrop(e, node.id)}
-                onDragEnd={handleDragEnd}
-                onClick={() => {
-                  if (dragOccurredRef.current) return;
-                  if (node.type !== "annotation") {
-                    onNodeClick(node.id);
-                  } else {
-                    toggleAnnotation(node.id);
-                  }
-                }}
+            <p style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: "var(--font-size-xl)",
+              fontWeight: 600,
+              color: "var(--text-primary)",
+              opacity: 0.7,
+            }}>
+              Taste Canvas
+            </p>
+            <p style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: "var(--font-size-lg)",
+              color: "var(--text-tertiary)",
+              fontWeight: 400,
+            }}>
+              Paste anything to begin
+            </p>
+            <p style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: "var(--font-size-sm)",
+              color: "var(--text-tertiary)",
+              opacity: 0.6,
+            }}>
+              Images, links, and videos.
+            </p>
+            <span style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: 24,
+              height: 22,
+              padding: "0 8px",
+              borderRadius: "var(--radius-xs)",
+              background: "var(--surface-raised)",
+              border: "1px solid var(--border-default)",
+              fontFamily: "var(--font-mono)",
+              fontSize: "12px",
+              color: "var(--text-secondary)",
+              lineHeight: 1,
+              marginTop: 4,
+            }}>
+              Cmd+V
+            </span>
+          </div>
+        ) : (
+          <>
+            {/* Toolbar row */}
+            <div className="tc-grid__toolbar" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
+              <button
+                onClick={() => setSortNewest((v) => !v)}
                 style={{
-                  display: "block", breakInside: "avoid", pageBreakInside: "avoid",
-                  marginBottom: "var(--grid-gap)",
-                  position: "relative",
-                  opacity: draggedId === node.id ? 0.4 : 1,
-                  outline: dragOverId === node.id && draggedId !== node.id
-                    ? "2px solid var(--accent-default)" : "none",
-                  outlineOffset: 2,
-                  borderRadius: "var(--radius-md)",
-                  transition: "opacity 0.15s ease, outline 0.1s ease",
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "6px 12px",
+                  borderRadius: "var(--radius-sm)",
+                  background: sortNewest ? "var(--accent-subtle)" : "var(--surface-raised)",
+                  border: `1px solid ${sortNewest ? "var(--accent-default)" : "var(--border-subtle)"}`,
+                  color: sortNewest ? "var(--accent-default)" : "var(--text-secondary)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "var(--font-size-xs)",
+                  letterSpacing: "var(--letter-spacing-wide)",
+                  textTransform: "uppercase",
                   cursor: "pointer",
+                  transition: "all var(--motion-duration-small) var(--motion-easing-out)",
                 }}
               >
-                {node.type === "image" ? (
-                  <>
-                    <div className="tc-grid__item-media" style={{ position: "relative" }}>
-                      <img
-                        className="tc-grid__item-image"
-                        src={resolveUrl(node.src)}
-                        alt={node.alt}
-                        draggable={false}
-                        style={{ width: "100%", height: "auto", borderRadius: "var(--radius-md)", display: "block", pointerEvents: "none" }}
-                      />
-                      {/* Connection endpoint dot in grid */}
-                      {isConnected && (
-                        <div
-                          className="tc-grid__item-endpoint-dot"
-                          style={{
-                            position: "absolute", top: 8, right: 8,
-                            width: 8, height: 8, borderRadius: "50%",
-                            background: "var(--border-strong)",
-                            border: "1.5px solid var(--surface-raised)",
-                            pointerEvents: "none", transition: "background 0.2s ease",
-                          }}
-                        />
-                      )}
-                    </div>
-                    <div
-                      className="tc-grid__item-annotation-collapse"
-                      style={{
-                        marginTop: "var(--grid-inner-gap)",
-                        opacity: annotationOpen ? 1 : 0,
-                        maxHeight: annotationOpen ? "400px" : "0px",
-                        overflow: "hidden",
-                        pointerEvents: annotationOpen ? "auto" : "none",
-                        transition: "opacity var(--motion-duration-small) var(--motion-easing-out), max-height 0.25s var(--motion-easing-out)",
-                      }}
-                    >
-                      <AnnotationCard initialBody={node.annotation} cardStyle={{ width: "100%" }} hideToolbar />
-                    </div>
-                  </>
-                ) : node.type === "link" ? (
-                  <>
-                    <div className="tc-grid__item-media" style={{ position: "relative" }}>
-                      <LinkPreviewCard
-                        data={node.preview && node.name ? { ...node.preview, title: node.name } : node.preview}
-                        fetchError={node.fetchError}
-                        width="100%"
-                      />
+                <ArrowDownUp size={11} />
+                Newest first
+              </button>
+            </div>
+
+            {/* Manual flexbox masonry */}
+            <div
+              className="tc-grid__masonry"
+              ref={masonryRef}
+              onDragOver={handleMasonryDragOver}
+              onDrop={handleMasonryDrop}
+              onDragLeave={handleMasonryDragLeave}
+              style={{ display: "flex", gap: "var(--grid-col-gap)", position: "relative" }}
+            >
+              {columns.map((colNodes, colIdx) => (
+                <div
+                  key={colIdx}
+                  ref={(el) => { columnRefs.current[colIdx] = el; }}
+                  className="tc-grid__column"
+                  style={{ flex: 1, display: "flex", flexDirection: "column", gap: "var(--grid-gap)" }}
+                >
+                  {colNodes.map((node, posInCol) => {
+                    const annotationOpen = expandedAnnotations.has(node.id);
+                    const hasAnnotation  = (node.type === "image" || node.type === "link") && (node as ImageNode | LinkNode).annotation.trim() !== "";
+                    const isConnected    = connectedNodeIds.has(node.id);
+
+                    const isInsertBefore =
+                      insertionIndicator?.type === "horizontal" &&
+                      insertionIndicator.colIdx === colIdx &&
+                      insertionIndicator.position === posInCol;
+
+                    const isInsertAfterLast =
+                      posInCol === colNodes.length - 1 &&
+                      insertionIndicator?.type === "horizontal" &&
+                      insertionIndicator.colIdx === colIdx &&
+                      insertionIndicator.position === colNodes.length;
+
+                    const isBelow =
+                      insertionIndicator?.type === "horizontal" &&
+                      insertionIndicator.colIdx === colIdx &&
+                      posInCol >= insertionIndicator.position;
+
+                    const indicatorLine = (
                       <div
-                        className="tc-grid__item-annotation-dot"
+                        className="tc-grid__insertion-line"
                         style={{
-                          position: "absolute", left: -5, top: "50%",
-                          transform: "translateY(-50%)",
-                          width: 10, height: 10, borderRadius: "50%",
-                          background: hasAnnotation ? "var(--accent-default)" : "var(--text-tertiary)",
-                          pointerEvents: "none", transition: "background 0.2s ease",
+                          height: "var(--grid-indicator-thickness)",
+                          background: "var(--grid-indicator-color)",
+                          borderRadius: "var(--radius-full)",
+                          opacity: 0.6,
+                          margin: "-6px 0",
                         }}
                       />
-                      {isConnected && (
+                    );
+
+                    return (
+                      <Fragment key={node.id}>
+                        {isInsertBefore && indicatorLine}
                         <div
-                          className="tc-grid__item-endpoint-dot"
-                          style={{
-                            position: "absolute", top: 8, right: 8,
-                            width: 8, height: 8, borderRadius: "50%",
-                            background: "var(--border-strong)",
-                            border: "1.5px solid var(--surface-raised)",
-                            pointerEvents: "none",
+                          className={`tc-grid__item tc-grid__item--${node.type}`}
+                          data-grid-node={node.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, node.id)}
+                          onDragEnd={handleDragEnd}
+                          onClick={() => {
+                            if (dragOccurredRef.current) return;
+                            if (node.type !== "annotation") {
+                              onNodeClick(node.id);
+                            } else {
+                              toggleAnnotation(node.id);
+                            }
                           }}
-                        />
-                      )}
-                    </div>
+                          style={{
+                            position: "relative",
+                            opacity: draggedId === node.id ? 0.4 : 1,
+                            borderRadius: "var(--radius-md)",
+                            cursor: "pointer",
+                            transform: isBelow ? "translateY(10px)" : "translateY(0)",
+                            transition: `transform var(--motion-duration-small) var(--motion-easing-out), opacity 0.15s ease`,
+                          }}
+                        >
+                          {node.type === "image" ? (
+                            <>
+                              <div className="tc-grid__item-media" style={{ position: "relative" }}>
+                                <img
+                                  className="tc-grid__item-image"
+                                  src={resolveUrl(node.src)}
+                                  alt={node.alt}
+                                  draggable={false}
+                                  style={{ width: "100%", height: "auto", borderRadius: "var(--radius-md)", display: "block", pointerEvents: "none" }}
+                                />
+                                {isConnected && (
+                                  <div
+                                    className="tc-grid__item-endpoint-dot"
+                                    style={{
+                                      position: "absolute", top: 8, right: 8,
+                                      width: 8, height: 8, borderRadius: "50%",
+                                      background: "var(--border-strong)",
+                                      border: "1.5px solid var(--surface-raised)",
+                                      pointerEvents: "none", transition: "background 0.2s ease",
+                                    }}
+                                  />
+                                )}
+                              </div>
+                              <div
+                                className="tc-grid__item-annotation-collapse"
+                                style={{
+                                  marginTop: "var(--grid-inner-gap)",
+                                  opacity: annotationOpen ? 1 : 0,
+                                  maxHeight: annotationOpen ? "400px" : "0px",
+                                  overflow: "hidden",
+                                  pointerEvents: annotationOpen ? "auto" : "none",
+                                  transition: "opacity var(--motion-duration-small) var(--motion-easing-out), max-height 0.25s var(--motion-easing-out)",
+                                }}
+                              >
+                                <AnnotationCard initialBody={node.annotation} cardStyle={{ width: "100%" }} hideToolbar />
+                              </div>
+                            </>
+                          ) : node.type === "link" ? (
+                            <>
+                              <div className="tc-grid__item-media" style={{ position: "relative" }}>
+                                <LinkPreviewCard
+                                  data={node.preview && node.name ? { ...node.preview, title: node.name } : node.preview}
+                                  fetchError={node.fetchError}
+                                  width="100%"
+                                  url={node.url}
+                                />
+                                <div
+                                  className="tc-grid__item-annotation-dot"
+                                  style={{
+                                    position: "absolute", left: -5, top: "50%",
+                                    transform: "translateY(-50%)",
+                                    width: 10, height: 10, borderRadius: "50%",
+                                    background: hasAnnotation ? "var(--accent-default)" : "var(--text-tertiary)",
+                                    pointerEvents: "none", transition: "background 0.2s ease",
+                                  }}
+                                />
+                                {isConnected && (
+                                  <div
+                                    className="tc-grid__item-endpoint-dot"
+                                    style={{
+                                      position: "absolute", top: 8, right: 8,
+                                      width: 8, height: 8, borderRadius: "50%",
+                                      background: "var(--border-strong)",
+                                      border: "1.5px solid var(--surface-raised)",
+                                      pointerEvents: "none",
+                                    }}
+                                  />
+                                )}
+                              </div>
+                              <div
+                                className="tc-grid__item-annotation-collapse"
+                                style={{
+                                  marginTop: "var(--grid-inner-gap)",
+                                  opacity: annotationOpen ? 1 : 0,
+                                  maxHeight: annotationOpen ? "400px" : "0px",
+                                  overflow: "hidden",
+                                  pointerEvents: annotationOpen ? "auto" : "none",
+                                  transition: "opacity var(--motion-duration-small) var(--motion-easing-out), max-height 0.25s var(--motion-easing-out)",
+                                }}
+                              >
+                                <AnnotationCard initialBody={node.annotation} cardStyle={{ width: "100%" }} hideToolbar />
+                              </div>
+                            </>
+                          ) : (
+                            <AnnotationCard initialBody={node.body} cardStyle={{ width: "100%" }} />
+                          )}
+                        </div>
+                        {isInsertAfterLast && indicatorLine}
+                      </Fragment>
+                    );
+                  })}
+
+                  {/* Insertion line at top of empty column */}
+                  {colNodes.length === 0 &&
+                    insertionIndicator?.type === "horizontal" &&
+                    insertionIndicator.colIdx === colIdx && (
                     <div
-                      className="tc-grid__item-annotation-collapse"
+                      className="tc-grid__insertion-line"
                       style={{
-                        marginTop: "var(--grid-inner-gap)",
-                        opacity: annotationOpen ? 1 : 0,
-                        maxHeight: annotationOpen ? "400px" : "0px",
-                        overflow: "hidden",
-                        pointerEvents: annotationOpen ? "auto" : "none",
-                        transition: "opacity var(--motion-duration-small) var(--motion-easing-out), max-height 0.25s var(--motion-easing-out)",
+                        height: "var(--grid-indicator-thickness)",
+                        background: "var(--grid-indicator-color)",
+                        borderRadius: "var(--radius-full)",
+                        opacity: 0.6,
                       }}
-                    >
-                      <AnnotationCard initialBody={node.annotation} cardStyle={{ width: "100%" }} hideToolbar />
-                    </div>
-                  </>
-                ) : (
-                  <AnnotationCard initialBody={node.body} cardStyle={{ width: "100%" }} />
-                )}
-              </div>
-            );
-          })}
-        </div>
+                    />
+                  )}
+                </div>
+              ))}
+
+              {/* Vertical between-column indicator */}
+              {verticalLineStyle && (
+                <div className="tc-grid__insertion-line--vertical" style={verticalLineStyle} />
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1820,6 +2150,8 @@ export function CanvasClient({
   const [showOnboarding, setShowOnboarding]             = useState(false);
   const [canvasTitle, setCanvasTitle]                   = useState(canvas.title);
   const [localCanvasList, setLocalCanvasList]           = useState(canvasList);
+  const [bookmarkTree, setBookmarkTree]                 = useState<BookmarkFolder | null>(null);
+  const bookmarkFileRef                                 = useRef<HTMLInputElement>(null);
 
   // Auto-show onboarding on first visit
   useEffect(() => {
@@ -1890,6 +2222,80 @@ export function CanvasClient({
     },
     [localCanvasList, canvas.id, router]
   );
+
+  // ---------------------------------------------------------------------------
+  // Bookmark import
+  // ---------------------------------------------------------------------------
+
+  function handleImportBookmarks() {
+    bookmarkFileRef.current?.click();
+  }
+
+  function handleBookmarkFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset so the same file can be re-selected
+    e.target.value = "";
+    const reader = new FileReader();
+    reader.onerror = () => toast.error("Could not read file.");
+    reader.onload = () => {
+      const html = reader.result as string;
+      const tree = parseBookmarksHtml(html);
+      setBookmarkTree(tree);
+    };
+    reader.readAsText(file);
+  }
+
+  function handleBookmarkConfirm(items: BookmarkItem[]) {
+    setBookmarkTree(null);
+    if (items.length === 0) return;
+
+    checkpoint();
+
+    // Determine viewport center in canvas-world coords.
+    // We read the transform from sessionStorage since CanvasView owns it.
+    let tx = 0, ty = 0, scale = 1;
+    try {
+      const raw = sessionStorage.getItem(`tc-transform-${canvas.id}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.x === "number") { tx = parsed.x; ty = parsed.y; scale = parsed.scale; }
+      }
+    } catch { /* ignore */ }
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const originX = Math.round((vw / 2 - tx) / scale);
+    const originY = Math.round((vh / 2 - ty) / scale);
+
+    const positions = bookmarkGridPositions(items.length, originX, originY);
+
+    const newNodes: LinkNode[] = items.map((item, i) => ({
+      id: crypto.randomUUID(),
+      type: "link",
+      url: item.url,
+      name: item.title || undefined,
+      canvasX: positions[i].x,
+      canvasY: positions[i].y,
+      canvasW: LINK_CARD_W,
+      annotation: "",
+      preview: null,
+      loading: true,
+      fetchError: false,
+      createdAt: Date.now() + i,
+    }));
+
+    setNodes((prev) => {
+      const newIds = new Set(newNodes.map((n) => n.id));
+      return resolveCollisions([...newNodes, ...prev], newIds);
+    });
+
+    newNodes.forEach((node) => {
+      fetchLinkPreview(node.id, node.url, setNodes);
+    });
+
+    toast.success(`${items.length} link${items.length === 1 ? "" : "s"} added to canvas`);
+  }
 
   // Persist view changes
   const handleViewChange = useCallback(
@@ -1972,6 +2378,7 @@ export function CanvasClient({
 
       // Esc: close overlays in order of precedence
       if (e.key === "Escape") {
+        if (bookmarkTree) { setBookmarkTree(null); return; }
         if (showOnboarding) { handleOnboardingComplete(); return; }
         if (showShortcuts) { setShowShortcuts(false); return; }
         if (showSearch) { setShowSearch(false); return; }
@@ -2084,7 +2491,7 @@ export function CanvasClient({
       if (active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT")) return;
 
       if (nodesRef.current.length >= NODE_CAP) {
-        toast.error("30-node limit reached. Remove a node or start a new canvas.");
+        toast.error("150-node limit reached. Remove a node or start a new canvas.");
         return;
       }
 
@@ -2308,6 +2715,16 @@ export function CanvasClient({
       </div>
 
 
+      {/* Hidden file input for bookmark import */}
+      <input
+        ref={bookmarkFileRef}
+        type="file"
+        accept=".html"
+        style={{ display: "none" }}
+        onChange={handleBookmarkFile}
+        aria-hidden="true"
+      />
+
       {/* Top-right: AppMenu */}
       <AppMenuPanel
         displayName={profile.display_name}
@@ -2318,6 +2735,7 @@ export function CanvasClient({
         onReflectionModeChange={handleReflectionModeChange}
         onShowShortcuts={() => setShowShortcuts(true)}
         onShowOnboarding={() => setShowOnboarding(true)}
+        onImportBookmarks={handleImportBookmarks}
         canvasList={localCanvasList}
         currentCanvasId={canvas.id}
         profileId={profile.id}
@@ -2364,6 +2782,17 @@ export function CanvasClient({
       {/* Onboarding spotlight tour */}
       {showOnboarding && (
         <OnboardingSpotlight onComplete={handleOnboardingComplete} />
+      )}
+
+      {/* Bookmark import dialog */}
+      {bookmarkTree && (
+        <BookmarkImportDialog
+          tree={bookmarkTree}
+          existingUrls={new Set(nodes.filter((n) => n.type === "link").map((n) => (n as LinkNode).url))}
+          remainingCap={NODE_CAP - nodes.length}
+          onConfirm={handleBookmarkConfirm}
+          onClose={() => setBookmarkTree(null)}
+        />
       )}
     </div>
   );

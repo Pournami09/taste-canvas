@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "logbook": {
+      "source": "Pournami09/logbook",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "64f996992126a09950f6c265fe704a53ebe751f6060080984dbfad0a6d74b704"
+    }
+  }
+}

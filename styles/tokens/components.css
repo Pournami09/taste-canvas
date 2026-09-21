@@ -106,6 +106,10 @@
   --onboarding-dot-inactive: var(--border-default);
   --onboarding-scrim: var(--surface-overlay);
 
+  /* --- TweetPreviewCard --- */
+  --tweet-card-bg: var(--surface-raised-glass);
+  --tweet-card-border: var(--border-subtle);
+
   /* --- Grid View --- */
   /* Outer gap: space between separate card groups (annotation bottom to next card top). */
   --grid-gap: 20px;
@@ -117,4 +121,7 @@
   --grid-max-width: 1400px;
   /* Outer horizontal padding for the grid container. */
   --grid-padding-x: 32px;
+  /* Insertion indicator for drag reordering. */
+  --grid-indicator-color: var(--border-default);
+  --grid-indicator-thickness: 2px;
 }

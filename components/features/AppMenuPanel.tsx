@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Keyboard, Plus, LogOut, Pencil, Sun, Moon, MoreVertical, Globe, Lock, Code, Trash2, Lightbulb } from "lucide-react";
+import { Keyboard, Plus, LogOut, Pencil, Sun, Moon, MoreVertical, Globe, Lock, Code, Trash2, Lightbulb, Bookmark } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getTheme, setTheme, type Theme } from "@/lib/theme";
@@ -17,6 +17,7 @@ type AppMenuPanelProps = {
   onReflectionModeChange: (v: boolean) => void;
   onShowShortcuts: () => void;
   onShowOnboarding?: () => void;
+  onImportBookmarks?: () => void;
   canvasList?: CanvasListItem[];
   currentCanvasId?: string;
   profileId?: string;
@@ -342,6 +343,7 @@ export function AppMenuPanel({
   onReflectionModeChange,
   onShowShortcuts,
   onShowOnboarding,
+  onImportBookmarks,
   canvasList,
   currentCanvasId,
   profileId,
@@ -499,7 +501,7 @@ export function AppMenuPanel({
           >
             <p
               style={{
-                fontFamily: "var(--font-mono)",
+                fontFamily: "var(--font-sans)",
                 fontSize: "var(--font-size-xs)",
                 color: "var(--text-tertiary)",
                 letterSpacing: "var(--letter-spacing-wide)",
@@ -783,6 +785,16 @@ export function AppMenuPanel({
             >
               <Lightbulb size={14} />
               Show onboarding
+            </button>
+            <button
+              className="tc-app-menu__action"
+              onClick={() => { setOpen(false); onImportBookmarks?.(); }}
+              style={menuItemStyle}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--surface-subtle)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+            >
+              <Bookmark size={14} />
+              Import bookmarks
             </button>
             <button
               className="tc-app-menu__action tc-app-menu__action--signout"

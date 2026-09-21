@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { AnnotationCard } from "./AnnotationCard";
 import { LinkPreviewCard } from "./LinkPreviewCard";
 import type { CanvasNode, ImageNode, LinkNode, Edge } from "@/lib/canvas-types";
+import { parseTweetId } from "@/lib/twitter";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -22,7 +23,6 @@ type ReadOnlyCanvasViewProps = {
   nodes: CanvasNode[];
   edges: Edge[];
   resolveUrl: (src: string) => string;
-  onNodeClick?: (nodeId: string) => void;
 };
 
 // ---------------------------------------------------------------------------
@@ -32,7 +32,8 @@ type ReadOnlyCanvasViewProps = {
 function getNodeRect(node: CanvasNode): { x: number; y: number; w: number; h: number } {
   if (node.type === "image") return { x: node.canvasX, y: node.canvasY, w: node.canvasW, h: node.canvasH };
   if (node.type === "link") {
-    const h = !node.preview || node.loading ? 220 : node.preview.ogImage ? 260 : 110;
+    const isTweet = parseTweetId(node.url) !== null;
+    const h = isTweet ? 340 : !node.preview || node.loading ? 220 : node.preview.ogImage ? 260 : 110;
     return { x: node.canvasX, y: node.canvasY, w: node.canvasW, h };
   }
   return { x: node.canvasX, y: node.canvasY, w: 289, h: 110 };
@@ -46,11 +47,11 @@ export function ReadOnlyCanvasView({
   nodes,
   edges,
   resolveUrl,
-  onNodeClick,
 }: ReadOnlyCanvasViewProps) {
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
   const [isPanning, setIsPanning] = useState(false);
   const [isDraggingNode, setIsDraggingNode] = useState(false);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   // Local-only position overrides (never persisted; reset on reload)
   const [posOverrides, setPosOverrides] = useState<Map<string, { x: number; y: number }>>(new Map());
@@ -195,22 +196,14 @@ export function ReadOnlyCanvasView({
     }
   }, [nodes]);
 
-  const onPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!didDrag.current && panStart.current && onNodeClick) {
-      const target = e.target as HTMLElement;
-      const nodeEl = target.closest("[data-node-id]") as HTMLElement | null;
-      if (nodeEl) {
-        const nodeId = nodeEl.getAttribute("data-node-id");
-        if (nodeId) onNodeClick(nodeId);
-      }
-    }
+  const onPointerUp = useCallback(() => {
     panStart.current = null;
     pendingNodeId.current = null;
     draggingNodeId.current = null;
     didDrag.current = false;
     setIsPanning(false);
     setIsDraggingNode(false);
-  }, [onNodeClick]);
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Keyboard: Cmd+0 to fit
@@ -347,17 +340,23 @@ export function ReadOnlyCanvasView({
         {nodes.map((node) => {
           const pos = nodePos(node);
           const isBeingDragged = isDraggingNode && draggingNodeId.current === node.id;
+          const isHovered = hoveredNodeId === node.id;
+          const annotation = (node.type === "image" || node.type === "link") ? node.annotation : "";
+          const showAnnotation = isHovered && !!annotation && !isDraggingNode && !isPanning;
+          const nodeRect = getNodeRect(node);
           return (
             <div
               className={`tc-readonly-canvas__node tc-readonly-canvas__node--${node.type}`}
               key={node.id}
               data-node-id={node.id}
+              onPointerEnter={() => setHoveredNodeId(node.id)}
+              onPointerLeave={() => setHoveredNodeId((prev) => prev === node.id ? null : prev)}
               style={{
                 position: "absolute",
                 left: pos.x,
                 top: pos.y,
                 cursor: isBeingDragged ? "grabbing" : "grab",
-                zIndex: zLayers.get(node.id) ?? 1,
+                zIndex: isHovered ? 9999 : (zLayers.get(node.id) ?? 1),
                 transition: isBeingDragged ? "none" : "left 0.22s ease, top 0.22s ease",
               }}
             >
@@ -383,10 +382,30 @@ export function ReadOnlyCanvasView({
                     data={node.preview && node.name ? { ...node.preview, title: node.name } : node.preview}
                     fetchError={node.fetchError}
                     width={node.canvasW}
+                    url={node.url}
                   />
                 </div>
               ) : (
                 <AnnotationCard initialBody={node.body} readOnly hideToolbar />
+              )}
+
+              {/* Annotation card on hover */}
+              {showAnnotation && (
+                <div
+                  className="tc-readonly-canvas__hover-annotation"
+                  style={{
+                    position: "absolute",
+                    top: nodeRect.h + 4,
+                    left: FRAME_PADDING,
+                    width: nodeRect.w,
+                    pointerEvents: "none",
+                    opacity: 0,
+                    transform: "translateY(-4px)",
+                    animation: "annotationFadeIn 140ms ease-out forwards",
+                  }}
+                >
+                  <AnnotationCard initialBody={annotation} readOnly hideToolbar cardStyle={{ width: "100%" }} />
+                </div>
               )}
             </div>
           );
