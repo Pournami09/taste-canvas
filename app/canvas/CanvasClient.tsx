@@ -21,7 +21,7 @@ import { useAutoSave } from "@/lib/hooks/use-auto-save";
 import { useSignedUrls } from "@/lib/hooks/use-signed-urls";
 import { uploadImageToR2 } from "@/lib/upload";
 import { createClient } from "@/lib/supabase/client";
-import type { CanvasNode, ImageNode, AnnotationNode, LinkNode, Edge } from "@/lib/canvas-types";
+import type { CanvasNode, ImageNode, AnnotationNode, LinkNode, VideoNode, Edge } from "@/lib/canvas-types";
 import type { LinkPreviewData } from "@/components/features/LinkPreviewCard";
 import type { DbProfile, DbCanvas } from "@/lib/canvas-db";
 import { parseTweetId } from "@/lib/twitter";
@@ -297,6 +297,132 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
         {/* Annotation card: right */}
         <div
           className="tc-image-node__annotation-slot"
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: "100%",
+            paddingLeft: 12,
+            zIndex: 10,
+            opacity: showOverlay ? 1 : 0,
+            pointerEvents: showOverlay ? "auto" : "none",
+            transition: "opacity 0.15s ease",
+          }}
+        >
+          <AnnotationCard
+            initialBody={node.annotation}
+            onSave={onAnnotationSave}
+            onEditingChange={setAnnotationEditing}
+            hideToolbar
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// VideoNodeView
+// ---------------------------------------------------------------------------
+
+type VideoNodeViewProps = {
+  node: VideoNode;
+  isSelected: boolean;
+  isConnecting: boolean;
+  scale: number;
+  resolveUrl: (src: string) => string;
+  onAnnotationSave: (body: string) => void;
+  onConnectStart: (e: React.PointerEvent) => void;
+};
+
+function VideoNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAnnotationSave, onConnectStart }: VideoNodeViewProps) {
+  const { hovered, onMouseEnter, onMouseLeave } = useHoverWithDelay(200);
+  const [annotationEditing, setAnnotationEditing] = useState(false);
+
+  const showOverlay = hovered || isSelected || annotationEditing;
+  const active = hovered || isSelected;
+  const videoSrc = resolveUrl(node.src);
+
+  return (
+    <div className="tc-video-node" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+      <div
+        className="tc-video-node__frame"
+        style={{ position: "relative", padding: FRAME_PADDING, borderRadius: "var(--radius-lg)" }}
+      >
+        <CornerHandle corner="nw" active={active} selected={isSelected} scale={scale} />
+        <CornerHandle corner="ne" active={active} selected={isSelected} scale={scale} />
+        <CornerHandle corner="sw" active={active} selected={isSelected} scale={scale} />
+        <CornerHandle corner="se" active={active} selected={isSelected} scale={scale} />
+
+        {(hovered || isSelected) && !isConnecting && (
+          <div
+            className="tc-video-node__connect-handle"
+            data-connect-handle="true"
+            data-node-id={node.id}
+            onPointerDown={onConnectStart}
+            title="Drag to connect"
+            style={{
+              position: "absolute",
+              top: FRAME_PADDING,
+              right: FRAME_PADDING,
+              width: 12,
+              height: 12,
+              borderRadius: "50%",
+              background: "var(--accent-default)",
+              border: "2px solid var(--surface-background)",
+              cursor: "crosshair",
+              zIndex: 40,
+            }}
+          />
+        )}
+
+        <video
+          src={videoSrc}
+          preload="metadata"
+          playsInline
+          style={{
+            width: node.canvasW,
+            height: node.canvasH > 0 ? node.canvasH : undefined,
+            display: "block",
+            borderRadius: "var(--radius-md)",
+            objectFit: "cover",
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* Play badge: shows this is a video */}
+        {!active && (
+          <div
+            style={{
+              position: "absolute",
+              inset: FRAME_PADDING,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              pointerEvents: "none",
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                background: "rgba(0,0,0,0.5)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <svg width="14" height="16" viewBox="0 0 14 16" fill="none">
+                <path d="M1 1L13 8L1 15V1Z" fill="white" />
+              </svg>
+            </div>
+          </div>
+        )}
+
+        <div
+          className="tc-video-node__annotation-slot"
           onPointerDown={(e) => e.stopPropagation()}
           onPointerUp={(e) => e.stopPropagation()}
           style={{
@@ -748,6 +874,61 @@ function CanvasView({
         }
       }
 
+      // Pasted video file: upload to R2, probe dimensions via video element
+      const videoItem = items.find((item) => item.type.startsWith("video/"));
+      if (videoItem) {
+        const file = videoItem.getAsFile();
+        if (file) {
+          toast.promise(
+            uploadImageToR2(file).then(async ({ key }) => {
+              const signedUrl = await signKey(key);
+              const probe = document.createElement("video");
+              probe.preload = "metadata";
+              probe.onloadedmetadata = () => {
+                const raw = probe.videoWidth || 480;
+                const w = Math.min(raw, 600);
+                const h = probe.videoHeight
+                  ? Math.round((probe.videoHeight / probe.videoWidth) * w)
+                  : Math.round(w * 9 / 16);
+                const nodeId = crypto.randomUUID();
+                checkpoint();
+                setNodes((prev) => {
+                  const newNode: VideoNode = {
+                    id: nodeId, type: "video", src: key,
+                    canvasX: cx - Math.round(w / 2), canvasY: cy - Math.round(h / 2),
+                    canvasW: w, canvasH: h, annotation: "", createdAt: Date.now(),
+                  };
+                  return resolveCollisions([newNode, ...prev], new Set([nodeId]));
+                });
+                onNodeCreated(nodeId);
+                URL.revokeObjectURL(probe.src);
+              };
+              probe.onerror = () => {
+                const nodeId = crypto.randomUUID();
+                checkpoint();
+                setNodes((prev) => {
+                  const newNode: VideoNode = {
+                    id: nodeId, type: "video", src: key,
+                    canvasX: cx - 240, canvasY: cy - 135, canvasW: 480, canvasH: 270,
+                    annotation: "", createdAt: Date.now(),
+                  };
+                  return resolveCollisions([newNode, ...prev], new Set([nodeId]));
+                });
+                onNodeCreated(nodeId);
+                URL.revokeObjectURL(probe.src);
+              };
+              probe.src = signedUrl;
+            }),
+            {
+              loading: "Uploading video...",
+              success: "Video uploaded",
+              error: "Upload failed",
+            }
+          );
+          return;
+        }
+      }
+
       const textItem = items.find((item) => item.type === "text/plain");
       if (textItem) {
         textItem.getAsString((raw) => {
@@ -872,7 +1053,7 @@ function CanvasView({
         if (resizeNodeEl && corner) {
           const nodeId = resizeNodeEl.getAttribute("data-node-id")!;
           const node = nodesRef.current.find((n) => n.id === nodeId);
-          if (node && node.type === "image") {
+          if (node && (node.type === "image" || node.type === "video")) {
             resizingNodeId.current = nodeId;
             resizeCorner.current   = corner;
             resizeStart.current    = {
@@ -1057,8 +1238,8 @@ function CanvasView({
         nodesRef.current.forEach((node) => {
           const sx = node.canvasX * scale + tx;
           const sy = node.canvasY * scale + ty;
-          const nw = node.type === "image" ? node.canvasW * scale : LINK_CARD_W * scale;
-          const nh = node.type === "image" ? (node.canvasH ?? 200) * scale : 200 * scale;
+          const nw = (node.type === "image" || node.type === "video") ? node.canvasW * scale : LINK_CARD_W * scale;
+          const nh = (node.type === "image" || node.type === "video") ? (node.canvasH ?? 200) * scale : 200 * scale;
           if (sx < rect.x + rect.w && sx + nw > rect.x && sy < rect.y + rect.h && sy + nh > rect.y) {
             newIds.add(node.id);
           }
@@ -1441,7 +1622,21 @@ function CanvasView({
               >
 
 
-                {node.type === "image" ? (
+                {node.type === "video" ? (
+                  <VideoNodeView
+                    node={node}
+                    isSelected={selectedIds.has(node.id)}
+                    isConnecting={!!connectingFromId.current}
+                    scale={transform.scale}
+                    resolveUrl={resolveUrl}
+                    onAnnotationSave={(body) => setNodes((prev) => prev.map((n) => n.id === node.id ? { ...n, annotation: body } as CanvasNode : n))}
+                    onConnectStart={(e) => {
+                      connectingFromId.current = node.id;
+                      setConnectingCursor({ x: e.clientX, y: e.clientY });
+                      (canvasEl.current as HTMLDivElement).setPointerCapture(e.pointerId);
+                    }}
+                  />
+                ) : node.type === "image" ? (
                   <ImageNodeView
                     node={node}
                     isSelected={selectedIds.has(node.id)}
@@ -1503,7 +1698,7 @@ function isDirectImageUrl(urlStr: string): boolean {
 const NODE_GAP = 40;
 
 function getNodeRect(node: CanvasNode): { x: number; y: number; w: number; h: number } {
-  if (node.type === "image") return { x: node.canvasX, y: node.canvasY, w: node.canvasW, h: node.canvasH };
+  if (node.type === "image" || node.type === "video") return { x: node.canvasX, y: node.canvasY, w: node.canvasW, h: node.canvasH };
   if (node.type === "link") {
     const isTweet = parseTweetId(node.url) !== null;
     const h = isTweet ? 340 : !node.preview || node.loading ? 220 : node.preview.ogImage ? 260 : 110;
@@ -1991,7 +2186,7 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
                 >
                   {colNodes.map((node, posInCol) => {
                     const annotationOpen = expandedAnnotations.has(node.id);
-                    const hasAnnotation  = (node.type === "image" || node.type === "link") && (node as ImageNode | LinkNode).annotation.trim() !== "";
+                    const hasAnnotation  = (node.type === "image" || node.type === "link" || node.type === "video") && (node as ImageNode | LinkNode | VideoNode).annotation.trim() !== "";
                     const isConnected    = connectedNodeIds.has(node.id);
 
                     const isInsertBefore =
@@ -2049,7 +2244,48 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
                             transition: `transform var(--motion-duration-small) var(--motion-easing-out), opacity 0.15s ease`,
                           }}
                         >
-                          {node.type === "image" ? (
+                          {node.type === "video" ? (
+                            <>
+                              <div className="tc-grid__item-media" style={{ position: "relative" }}>
+                                <video
+                                  className="tc-grid__item-video"
+                                  src={resolveUrl(node.src)}
+                                  preload="metadata"
+                                  playsInline
+                                  style={{ width: "100%", height: "auto", borderRadius: "var(--radius-md)", display: "block", pointerEvents: "none" }}
+                                />
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    pointerEvents: "none",
+                                  }}
+                                >
+                                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
+                                      <path d="M1 1L11 7L1 13V1Z" fill="white" />
+                                    </svg>
+                                  </div>
+                                </div>
+                              </div>
+                              <div
+                                className="tc-grid__item-annotation-collapse"
+                                style={{
+                                  marginTop: "var(--grid-inner-gap)",
+                                  opacity: annotationOpen ? 1 : 0,
+                                  maxHeight: annotationOpen ? "400px" : "0px",
+                                  overflow: "hidden",
+                                  pointerEvents: annotationOpen ? "auto" : "none",
+                                  transition: "opacity var(--motion-duration-small) var(--motion-easing-out), max-height 0.25s var(--motion-easing-out)",
+                                }}
+                              >
+                                <AnnotationCard initialBody={node.annotation} cardStyle={{ width: "100%" }} hideToolbar />
+                              </div>
+                            </>
+                          ) : node.type === "image" ? (
                             <>
                               <div className="tc-grid__item-media" style={{ position: "relative" }}>
                                 <img
@@ -2612,6 +2848,61 @@ export function CanvasClient({
             {
               loading: "Uploading image...",
               success: "Image uploaded",
+              error: "Upload failed",
+            }
+          );
+          return;
+        }
+      }
+
+      // Pasted video file
+      const videoItem = items.find((item) => item.type.startsWith("video/"));
+      if (videoItem) {
+        const file = videoItem.getAsFile();
+        if (file) {
+          toast.promise(
+            uploadImageToR2(file).then(async ({ key }) => {
+              const signedUrl = await signKey(key);
+              const probe = document.createElement("video");
+              probe.preload = "metadata";
+              probe.onloadedmetadata = () => {
+                const raw = probe.videoWidth || 480;
+                const w = Math.min(raw, 600);
+                const h = probe.videoHeight
+                  ? Math.round((probe.videoHeight / probe.videoWidth) * w)
+                  : Math.round(w * 9 / 16);
+                const nodeId = crypto.randomUUID();
+                checkpoint();
+                setNodes((prev) => {
+                  const newNode: VideoNode = {
+                    id: nodeId, type: "video", src: key,
+                    canvasX: cx - Math.round(w / 2), canvasY: cy - Math.round(h / 2),
+                    canvasW: w, canvasH: h, annotation: "", createdAt: Date.now(),
+                  };
+                  return resolveCollisions([newNode, ...prev], new Set([nodeId]));
+                });
+                handleNodeCreated(nodeId);
+                URL.revokeObjectURL(probe.src);
+              };
+              probe.onerror = () => {
+                const nodeId = crypto.randomUUID();
+                checkpoint();
+                setNodes((prev) => {
+                  const newNode: VideoNode = {
+                    id: nodeId, type: "video", src: key,
+                    canvasX: cx - 240, canvasY: cy - 135, canvasW: 480, canvasH: 270,
+                    annotation: "", createdAt: Date.now(),
+                  };
+                  return resolveCollisions([newNode, ...prev], new Set([nodeId]));
+                });
+                handleNodeCreated(nodeId);
+                URL.revokeObjectURL(probe.src);
+              };
+              probe.src = signedUrl;
+            }),
+            {
+              loading: "Uploading video...",
+              success: "Video uploaded",
               error: "Upload failed",
             }
           );

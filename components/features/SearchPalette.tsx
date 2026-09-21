@@ -13,6 +13,7 @@ type SearchResult = {
 function getNodeTitle(node: CanvasNode): string {
   if (node.type === "image") return node.alt || "Image";
   if (node.type === "link") return node.name ?? node.preview?.title ?? node.url;
+  if (node.type === "video") return "Video";
   return node.body.slice(0, 60) || "Note";
 }
 

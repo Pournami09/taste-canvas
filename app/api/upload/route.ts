@@ -4,15 +4,24 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createClient } from "@/lib/supabase/server";
 import { getR2Client, getR2BucketName } from "@/lib/r2";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;   // 10 MB
+const MAX_VIDEO_SIZE = 200 * 1024 * 1024;  // 200 MB
 
-const ALLOWED_TYPES = new Set([
+const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/gif",
   "image/webp",
   "image/avif",
   "image/svg+xml",
+]);
+
+const ALLOWED_VIDEO_TYPES = new Set([
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/mov",
+  "video/ogg",
 ]);
 
 export async function POST(request: Request) {
@@ -39,16 +48,20 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!ALLOWED_TYPES.has(contentType)) {
+  const isImage = ALLOWED_IMAGE_TYPES.has(contentType);
+  const isVideo = ALLOWED_VIDEO_TYPES.has(contentType);
+
+  if (!isImage && !isVideo) {
     return NextResponse.json(
       { error: "Unsupported file type" },
       { status: 400 }
     );
   }
 
-  if (size > MAX_FILE_SIZE) {
+  const sizeLimit = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+  if (size > sizeLimit) {
     return NextResponse.json(
-      { error: "File exceeds 10 MB limit" },
+      { error: `File exceeds ${isVideo ? "200 MB" : "10 MB"} limit` },
       { status: 400 }
     );
   }

@@ -6,6 +6,7 @@ import type {
   ImageNode,
   AnnotationNode,
   LinkNode,
+  VideoNode,
   Edge,
 } from "@/lib/canvas-types";
 
@@ -16,7 +17,7 @@ import type {
 export type DbCanvasNode = {
   id: string;
   canvas_id: string;
-  node_type: "image" | "annotation" | "link";
+  node_type: "image" | "annotation" | "link" | "video";
   canvas_x: number;
   canvas_y: number;
   sort_order: number;
@@ -123,6 +124,19 @@ export function dbNodeToClient(row: DbCanvasNode): CanvasNode {
         fetchError: row.fetch_error,
         createdAt,
       } satisfies LinkNode;
+
+    case "video":
+      return {
+        id: row.id,
+        type: "video",
+        src: row.src ?? "",
+        canvasX: row.canvas_x,
+        canvasY: row.canvas_y,
+        canvasW: row.canvas_w ?? 480,
+        canvasH: row.canvas_h ?? 270,
+        annotation: row.annotation,
+        createdAt,
+      } satisfies VideoNode;
   }
 }
 
@@ -195,6 +209,15 @@ export function clientNodeToDb(
         preview_og_image: node.preview?.ogImage ?? null,
         preview_site_name: node.preview?.siteName ?? null,
         fetch_error: node.fetchError,
+      };
+
+    case "video":
+      return {
+        ...base,
+        src: node.src,
+        canvas_w: node.canvasW,
+        canvas_h: node.canvasH,
+        annotation: node.annotation,
       };
   }
 }

@@ -34,7 +34,9 @@ export function useSignedUrls(
 
   const getImageKeys = useCallback((nodeList: CanvasNode[]): string[] => {
     return nodeList
-      .filter((n): n is CanvasNode & { type: "image" } => n.type === "image")
+      .filter((n): n is CanvasNode & { type: "image" | "video"; src: string } =>
+        n.type === "image" || n.type === "video"
+      )
       .map((n) => n.src)
       .filter(isR2Key);
   }, []);

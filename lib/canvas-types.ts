@@ -46,7 +46,19 @@ export type LinkNode = {
   createdAt: number;
 };
 
-export type CanvasNode = ImageNode | AnnotationNode | LinkNode;
+export type VideoNode = {
+  id: string;
+  type: "video";
+  src: string;
+  canvasX: number;
+  canvasY: number;
+  canvasW: number;
+  canvasH: number;
+  annotation: string;
+  createdAt: number;
+};
+
+export type CanvasNode = ImageNode | AnnotationNode | LinkNode | VideoNode;
 
 export type Edge = {
   id: string;

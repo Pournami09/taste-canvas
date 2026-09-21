@@ -385,9 +385,10 @@ export function ReadOnlyCanvasView({
                     url={node.url}
                   />
                 </div>
-              ) : (
+              ) : node.type === "annotation" ? (
                 <AnnotationCard initialBody={node.body} readOnly hideToolbar />
-              )}
+              ) : null}
+
 
               {/* Annotation card on hover */}
               {showAnnotation && (

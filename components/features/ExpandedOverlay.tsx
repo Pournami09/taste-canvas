@@ -45,7 +45,9 @@ function ConnectedNodeThumb({
           ? node.alt
           : node.type === "link"
           ? (node.preview?.title ?? node.url)
-          : node.body.slice(0, 40)
+          : node.type === "annotation"
+          ? node.body.slice(0, 40)
+          : "Video"
       }
       style={{
         width: 64,
@@ -120,7 +122,7 @@ function ConnectedNodeThumb({
               WebkitBoxOrient: "vertical",
             }}
           >
-            {(node as { body: string }).body}
+            {node.type === "annotation" ? node.body : ""}
           </p>
         </div>
       )}
@@ -306,7 +308,7 @@ export function ExpandedOverlay({
                   lineHeight: "var(--line-height-normal)",
                 }}
               >
-                {(node as { body: string }).body || (
+                {(node.type === "annotation" ? node.body : "") || (
                   <span style={{ color: "var(--text-tertiary)", fontStyle: "italic" }}>
                     No text yet.
                   </span>
