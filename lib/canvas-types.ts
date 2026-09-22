@@ -19,6 +19,7 @@ export type ImageNode = {
   canvasH: number;
   annotation: string;
   tags: string[];
+  canvasRotation: number;
   createdAt: number;
 };
 

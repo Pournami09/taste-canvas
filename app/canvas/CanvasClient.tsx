@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownUp, Plus, LayoutDashboard, Code, Keyboard } from "lucide-react";
+import { ArrowDownUp, Plus, LayoutDashboard, Code, Keyboard, RotateCw } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { ViewTogglePill, type View } from "@/components/features/ViewTogglePill";
 import { AnnotationCard } from "@/components/features/AnnotationCard";
@@ -197,19 +197,61 @@ type ImageNodeViewProps = {
   resolveUrl: (src: string) => string;
   onAnnotationSave: (body: string) => void;
   onConnectStart: (e: React.PointerEvent) => void;
+  onRotate: (deg: number) => void;
 };
 
-function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAnnotationSave, onConnectStart }: ImageNodeViewProps) {
+function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAnnotationSave, onConnectStart, onRotate }: ImageNodeViewProps) {
   const { hovered, onMouseEnter, onMouseLeave } = useHoverWithDelay(200);
   const [annotationEditing, setAnnotationEditing] = useState(false);
+  const [liveRotation, setLiveRotation] = useState<number | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const rotateStartAngleRef = useRef<number | null>(null);
+  const rotateStartRotationRef = useRef(0);
 
   const showOverlay = hovered || isSelected || annotationEditing;
   const active = hovered || isSelected;
-  const hasAnnotation = node.annotation.trim() !== "";
   const imgH = node.canvasH > 0 ? node.canvasH : undefined;
+  const displayRotation = liveRotation ?? node.canvasRotation;
+
+  function onRotatePointerDown(e: React.PointerEvent) {
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const rect = rootRef.current!.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    rotateStartAngleRef.current = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI);
+    rotateStartRotationRef.current = node.canvasRotation;
+  }
+
+  function onRotatePointerMove(e: React.PointerEvent) {
+    if (rotateStartAngleRef.current === null) return;
+    const rect = rootRef.current!.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const angle = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI);
+    setLiveRotation(rotateStartRotationRef.current + (angle - rotateStartAngleRef.current));
+  }
+
+  function onRotatePointerUp() {
+    if (liveRotation === null) { rotateStartAngleRef.current = null; return; }
+    const snapped = ((Math.round(liveRotation / 90) * 90) % 360 + 360) % 360;
+    setLiveRotation(null);
+    rotateStartAngleRef.current = null;
+    onRotate(snapped);
+  }
 
   return (
-    <div className="tc-image-node" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+    <div
+      ref={rootRef}
+      className="tc-image-node"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      style={{
+        transform: `rotate(${displayRotation}deg)`,
+        transformOrigin: "center",
+        transition: liveRotation !== null ? "none" : "transform var(--motion-duration-small) var(--motion-easing-out)",
+      }}
+    >
       <div
         className="tc-image-node__frame"
         style={{
@@ -222,6 +264,43 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
         <CornerHandle corner="ne" active={active} selected={isSelected} scale={scale} />
         <CornerHandle corner="sw" active={active} selected={isSelected} scale={scale} />
         <CornerHandle corner="se" active={active} selected={isSelected} scale={scale} />
+
+        {/* Rotate handles at all 4 corners */}
+        {([
+          { top: -14, left: -14 },
+          { top: -14, right: -14 },
+          { bottom: -14, left: -14 },
+          { bottom: -14, right: -14 },
+        ] as React.CSSProperties[]).map((pos, i) => (
+          <div
+            key={i}
+            className="tc-image-node__rotate-handle"
+            onPointerDown={onRotatePointerDown}
+            onPointerMove={onRotatePointerMove}
+            onPointerUp={onRotatePointerUp}
+            onPointerCancel={onRotatePointerUp}
+            style={{
+              position: "absolute",
+              ...pos,
+              width: 22,
+              height: 22,
+              borderRadius: "50%",
+              background: "var(--surface-raised)",
+              border: "1px solid var(--border-default)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: liveRotation !== null ? "grabbing" : "grab",
+              zIndex: 10,
+              opacity: showOverlay ? 1 : 0,
+              pointerEvents: showOverlay ? "auto" : "none",
+              transition: "opacity 0.15s ease",
+              color: "var(--text-secondary)",
+            }}
+          >
+            <RotateCw size={11} />
+          </div>
+        ))}
 
 
         {/* Connect handle: drag to create a connection */}
@@ -846,7 +925,7 @@ function CanvasView({
                   const newNode: ImageNode = {
                     id: nodeId, type: "image", src: key, alt: "Pasted image",
                     canvasX: cx - Math.round(w / 2), canvasY: cy - Math.round(h / 2),
-                    canvasW: w, canvasH: h, annotation: "", tags: [], createdAt: Date.now(),
+                    canvasW: w, canvasH: h, annotation: "", tags: [], canvasRotation: 0, createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -859,7 +938,7 @@ function CanvasView({
                   const newNode: ImageNode = {
                     id: nodeId, type: "image", src: key, alt: "Pasted image",
                     canvasX: cx - 200, canvasY: cy - 150, canvasW: 400, canvasH: 300,
-                    annotation: "", tags: [], createdAt: Date.now(),
+                    annotation: "", tags: [], canvasRotation: 0, createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -979,7 +1058,7 @@ function CanvasView({
                     id: nodeId, type: "image", src: text,
                     alt: new URL(text).pathname.split("/").pop() || "Image",
                     canvasX: cx - Math.round(w / 2), canvasY: cy - Math.round(h / 2),
-                    canvasW: w, canvasH: h, annotation: "", tags: [], createdAt: Date.now(),
+                    canvasW: w, canvasH: h, annotation: "", tags: [], canvasRotation: 0, createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -994,7 +1073,7 @@ function CanvasView({
                     id: nodeId, type: "image", src: text,
                     alt: new URL(text).pathname.split("/").pop() || "Image",
                     canvasX: cx - 200, canvasY: cy - 150,
-                    canvasW: 400, canvasH: 300, annotation: "", tags: [], createdAt: Date.now(),
+                    canvasW: 400, canvasH: 300, annotation: "", tags: [], canvasRotation: 0, createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -1660,6 +1739,9 @@ function CanvasView({
                       setConnectingCursor(pos);
                       (canvasEl.current as HTMLDivElement).setPointerCapture(e.pointerId);
                     }}
+                    onRotate={(deg) =>
+                      setNodes((prev) => prev.map((n) => n.id === node.id ? { ...n, canvasRotation: deg } as CanvasNode : n))
+                    }
                   />
                 ) : node.type === "link" ? (
                   <LinkNodeView
@@ -2886,7 +2968,7 @@ export function CanvasClient({
                   const newNode: ImageNode = {
                     id: nodeId, type: "image", src: key, alt: "Pasted image",
                     canvasX: cx - Math.round(w / 2), canvasY: cy - Math.round(h / 2),
-                    canvasW: w, canvasH: h, annotation: "", tags: [], createdAt: Date.now(),
+                    canvasW: w, canvasH: h, annotation: "", tags: [], canvasRotation: 0, createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -2899,7 +2981,7 @@ export function CanvasClient({
                   const newNode: ImageNode = {
                     id: nodeId, type: "image", src: key, alt: "Pasted image",
                     canvasX: cx - 200, canvasY: cy - 150, canvasW: 400, canvasH: 300,
-                    annotation: "", tags: [], createdAt: Date.now(),
+                    annotation: "", tags: [], canvasRotation: 0, createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -3010,7 +3092,7 @@ export function CanvasClient({
                     id: nodeId, type: "image", src: text,
                     alt: new URL(text).pathname.split("/").pop() || "Image",
                     canvasX: cx - Math.round(w / 2), canvasY: cy - Math.round(h / 2),
-                    canvasW: w, canvasH: h, annotation: "", tags: [], createdAt: Date.now(),
+                    canvasW: w, canvasH: h, annotation: "", tags: [], canvasRotation: 0, createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });
@@ -3024,7 +3106,7 @@ export function CanvasClient({
                     id: nodeId, type: "image", src: text,
                     alt: new URL(text).pathname.split("/").pop() || "Image",
                     canvasX: cx - 200, canvasY: cy - 150,
-                    canvasW: 400, canvasH: 300, annotation: "", tags: [], createdAt: Date.now(),
+                    canvasW: 400, canvasH: 300, annotation: "", tags: [], canvasRotation: 0, createdAt: Date.now(),
                   };
                   return resolveCollisions([newNode, ...prev], new Set([nodeId]));
                 });

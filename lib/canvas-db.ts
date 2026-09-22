@@ -36,6 +36,7 @@ export type DbCanvasNode = {
   preview_site_name: string | null;
   fetch_error: boolean;
   tags: string[];
+  canvas_rotation: number | null;
 };
 
 export type DbCanvasEdge = {
@@ -89,6 +90,7 @@ export function dbNodeToClient(row: DbCanvasNode): CanvasNode {
         canvasH: row.canvas_h ?? 300,
         annotation: row.annotation,
         tags: row.tags ?? [],
+        canvasRotation: row.canvas_rotation ?? 0,
         createdAt,
       } satisfies ImageNode;
 
@@ -184,6 +186,7 @@ export function clientNodeToDb(
     preview_site_name: null as string | null,
     fetch_error: false,
     tags: [] as string[],
+    canvas_rotation: null as number | null,
   };
 
   switch (node.type) {
@@ -196,6 +199,7 @@ export function clientNodeToDb(
         canvas_h: node.canvasH,
         annotation: node.annotation,
         tags: node.tags,
+        canvas_rotation: node.canvasRotation,
       };
 
     case "annotation":

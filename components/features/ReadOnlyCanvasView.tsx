@@ -359,6 +359,8 @@ export function ReadOnlyCanvasView({
                 cursor: isBeingDragged ? "grabbing" : "grab",
                 zIndex: isHovered ? 9999 : (zLayers.get(node.id) ?? 1),
                 transition: isBeingDragged ? "none" : "left 0.22s ease, top 0.22s ease",
+                transform: node.type === "image" && node.canvasRotation ? `rotate(${node.canvasRotation}deg)` : undefined,
+                transformOrigin: "center",
               }}
             >
               {node.type === "image" ? (
