@@ -2214,7 +2214,6 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
                 >
                   {colNodes.map((node, posInCol) => {
                     const annotationOpen = expandedAnnotations.has(node.id);
-                    const hasAnnotation  = (node.type === "image" || node.type === "link" || node.type === "video") && (node as ImageNode | LinkNode | VideoNode).annotation.trim() !== "";
                     const isConnected    = connectedNodeIds.has(node.id);
 
                     const isInsertBefore =
@@ -2368,16 +2367,6 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
                                   fetchError={node.fetchError}
                                   width="100%"
                                   url={node.url}
-                                />
-                                <div
-                                  className="tc-grid__item-annotation-dot"
-                                  style={{
-                                    position: "absolute", left: -5, top: "50%",
-                                    transform: "translateY(-50%)",
-                                    width: 10, height: 10, borderRadius: "50%",
-                                    background: hasAnnotation ? "var(--accent-default)" : "var(--text-tertiary)",
-                                    pointerEvents: "none", transition: "background 0.2s ease",
-                                  }}
                                 />
                                 {isConnected && (
                                   <div
