@@ -204,6 +204,7 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
   const { hovered, onMouseEnter, onMouseLeave } = useHoverWithDelay(200);
   const [annotationEditing, setAnnotationEditing] = useState(false);
   const [liveRotation, setLiveRotation] = useState<number | null>(null);
+  const [hoveredHandleIdx, setHoveredHandleIdx] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const rotateStartAngleRef = useRef<number | null>(null);
   const rotateStartRotationRef = useRef(0);
@@ -279,6 +280,8 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
             onPointerMove={onRotatePointerMove}
             onPointerUp={onRotatePointerUp}
             onPointerCancel={onRotatePointerUp}
+            onMouseEnter={() => setHoveredHandleIdx(i)}
+            onMouseLeave={() => setHoveredHandleIdx(null)}
             style={{
               position: "absolute",
               ...pos,
@@ -298,7 +301,7 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
               color: "var(--text-secondary)",
             }}
           >
-            <RotateCw size={11} />
+            {hoveredHandleIdx === i && <RotateCw size={11} />}
           </div>
         ))}
 
@@ -374,7 +377,7 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
           />
         </div>
 
-        {/* Annotation card: right */}
+        {/* Annotation card: right (counter-rotated to stay upright) */}
         <div
           className="tc-image-node__annotation-slot"
           onPointerDown={(e) => e.stopPropagation()}
@@ -388,6 +391,8 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
             opacity: showOverlay ? 1 : 0,
             pointerEvents: showOverlay ? "auto" : "none",
             transition: "opacity 0.15s ease",
+            transform: `rotate(${-displayRotation}deg)`,
+            transformOrigin: "0 0",
           }}
         >
           <AnnotationCard
