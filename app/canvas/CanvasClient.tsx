@@ -3172,7 +3172,7 @@ export function CanvasClient({
 
   return (
     <div className="tc-page" style={{ position: "fixed", inset: 0 }}>
-      <Toaster position="bottom-center" theme={currentTheme} />
+      <Toaster position="bottom-right" theme={currentTheme} />
 
       {/* View area */}
       <div
