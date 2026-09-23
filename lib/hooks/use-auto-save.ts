@@ -23,6 +23,10 @@ export function useAutoSave(
     async (currentNodes: CanvasNode[], currentEdges: Edge[]) => {
       if (!canvasId || savingRef.current) return;
 
+      // Never overwrite a non-empty canvas with zero nodes. Protects against
+      // saving during a brief empty state (e.g. initial render timing, HMR).
+      if (currentNodes.length === 0 && lastSavedRef.current !== "") return;
+
       const snapshot = JSON.stringify({ nodes: currentNodes, edges: currentEdges });
       if (snapshot === lastSavedRef.current) return;
 
