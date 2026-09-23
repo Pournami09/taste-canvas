@@ -213,12 +213,15 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
   const imgH = node.canvasH > 0 ? node.canvasH : undefined;
   const displayRotation = liveRotation ?? node.canvasRotation;
 
-  // Annotation position: computed outside the rotation so the card never overlaps the image.
+  // Frame dimensions used for wrapper sizing and annotation placement.
   const frameW = node.canvasW + 2 * FRAME_PADDING;
   const frameH = (node.canvasH > 0 ? node.canvasH : node.canvasW * 0.75) + 2 * FRAME_PADDING;
   const normRot = ((displayRotation % 360) + 360) % 360;
-  const annotLeft = (normRot === 90 || normRot === 270) ? frameW / 2 + frameH / 2 + 12 : frameW + 12;
-  const annotTop  = (normRot === 90 || normRot === 270) ? frameH / 2 - frameW / 2 : 0;
+
+  // Wrapper for 90/270 is (frameH x frameW). Annotation is always just right of it.
+  const wrapperWidth = (normRot === 90 || normRot === 270) ? frameH : frameW;
+  const annotLeft = wrapperWidth + 12;
+  const annotTop  = 0;
 
   function onRotatePointerDown(e: React.PointerEvent) {
     e.stopPropagation();
@@ -255,6 +258,13 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       style={{
+        // When wrapper is resized to the visual bounding box, offset tc-image-node
+        // so its rotation center stays at the wrapper's center.
+        ...(normRot === 90 || normRot === 270 ? {
+          position: "absolute" as const,
+          left: (frameH - frameW) / 2,
+          top: (frameW - frameH) / 2,
+        } : {}),
         transform: `rotate(${displayRotation}deg)`,
         transformOrigin: "center",
         transition: liveRotation !== null ? "none" : "transform var(--motion-duration-small) var(--motion-easing-out)",
@@ -377,6 +387,7 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
     </div>
 
     {/* Annotation card: sits outside the rotation transform so it never overlaps the image */}
+    {liveRotation === null && (
     <div
       className="tc-image-node__annotation-slot"
       onPointerDown={(e) => e.stopPropagation()}
@@ -398,6 +409,7 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
         hideToolbar
       />
     </div>
+    )}
     </>
   );
 }
@@ -1390,7 +1402,9 @@ function CanvasView({
   // Render
   // ---------------------------------------------------------------------------
 
-  const dotSize = 24 * transform.scale;
+  // Dot grid: fixed 24px spacing in viewport space so density never changes at any zoom level.
+  // backgroundPosition uses modulo so dots track canvas panning without scaling.
+  const DOT_GRID_SPACING = 24;
 
   // Compute connected node IDs for endpoint dot rendering
   const connectedNodeIds = useMemo(() => {
@@ -1451,8 +1465,8 @@ function CanvasView({
           cursor: connectingCursor ? "crosshair" : isDragging ? "crosshair" : "default",
           userSelect: isDragging ? "none" : "auto",
           backgroundImage: "radial-gradient(circle, var(--dot-grid-color) 1.5px, transparent 1.5px)",
-          backgroundSize: `${dotSize}px ${dotSize}px`,
-          backgroundPosition: `${transform.x}px ${transform.y}px`,
+          backgroundSize: `${DOT_GRID_SPACING}px ${DOT_GRID_SPACING}px`,
+          backgroundPosition: `${((transform.x % DOT_GRID_SPACING) + DOT_GRID_SPACING) % DOT_GRID_SPACING}px ${((transform.y % DOT_GRID_SPACING) + DOT_GRID_SPACING) % DOT_GRID_SPACING}px`,
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -1694,6 +1708,25 @@ function CanvasView({
             const isFiltering = activeFilterTags.size > 0;
             const matchesFilter = !isFiltering || node.tags.some((t) => activeFilterTags.has(t));
             const nodeW = getNodeRect(node).w;
+
+            // For image nodes at 90°/270°, reposition + resize the wrapper to match
+            // the visual bounding box so hover/selection area matches the rotated image.
+            let wrapperLeft = node.canvasX;
+            let wrapperTop  = node.canvasY;
+            let wrapperW: number | undefined;
+            let wrapperH: number | undefined;
+            if (node.type === "image") {
+              const rot = (((node as ImageNode).canvasRotation % 360) + 360) % 360;
+              if (rot === 90 || rot === 270) {
+                const fw = (node as ImageNode).canvasW + 2 * FRAME_PADDING;
+                const fh = ((node as ImageNode).canvasH > 0 ? (node as ImageNode).canvasH : (node as ImageNode).canvasW * 0.75) + 2 * FRAME_PADDING;
+                wrapperLeft = node.canvasX + (fw - fh) / 2;
+                wrapperTop  = node.canvasY + (fh - fw) / 2;
+                wrapperW    = fh;
+                wrapperH    = fw;
+              }
+            }
+
             return (
               <div
                 className={`tc-canvas__node tc-canvas__node--${node.type}`}
@@ -1703,8 +1736,10 @@ function CanvasView({
                 onMouseLeave={() => setHoveredNodeId((prev) => prev === node.id ? null : prev)}
                 style={{
                   position: "absolute",
-                  left: node.canvasX,
-                  top: node.canvasY,
+                  left: wrapperLeft,
+                  top: wrapperTop,
+                  ...(wrapperW !== undefined ? { width: wrapperW } : {}),
+                  ...(wrapperH !== undefined ? { height: wrapperH } : {}),
                   cursor: "grab",
                   transition: isDragging
                     ? "opacity var(--motion-duration-small) var(--motion-easing-out)"
@@ -1781,6 +1816,8 @@ function CanvasView({
                       paddingLeft: FRAME_PADDING,
                       paddingRight: FRAME_PADDING,
                       maxWidth: nodeW + FRAME_PADDING * 2,
+                      // When wrapper has explicit height (rotated image), flow tags below it.
+                      ...(wrapperH !== undefined ? { position: "absolute" as const, top: wrapperH, left: 0 } : {}),
                     }}
                   >
                     {node.tags.map((tag) => (

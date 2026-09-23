@@ -28,8 +28,9 @@ export function ViewTogglePill({ value, onChange, className }: ViewTogglePillPro
     const btnRect = activeBtn.getBoundingClientRect();
     const l = Math.round(btnRect.left - pillRect.left);
     const r = Math.round(pillRect.right - btnRect.right);
+    const v = Math.round(btnRect.top - pillRect.top);
 
-    setBg({ clipPath: `inset(0 ${r}px 0 ${l}px round 100px)`, animate: !firstMeasure.current });
+    setBg({ clipPath: `inset(${v}px ${r}px ${v}px ${l}px round 100px)`, animate: !firstMeasure.current });
     firstMeasure.current = false;
   }, [value]);
 
