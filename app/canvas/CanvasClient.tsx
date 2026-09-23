@@ -473,17 +473,24 @@ function VideoNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
           src={videoSrc}
           preload="metadata"
           playsInline
+          // Show native controls when the node is active so the user can play,
+          // seek, and adjust volume. Pointer events are enabled at the same time
+          // so the controls are interactive.
+          controls={active}
           style={{
             width: node.canvasW,
             height: node.canvasH > 0 ? node.canvasH : undefined,
             display: "block",
             borderRadius: "var(--radius-md)",
             objectFit: "cover",
-            pointerEvents: "none",
+            pointerEvents: active ? "auto" : "none",
           }}
+          // Stop propagation so interacting with the video (clicking controls,
+          // scrubbing the seek bar) does not trigger the canvas drag handler.
+          onPointerDown={active ? (e) => e.stopPropagation() : undefined}
         />
 
-        {/* Play badge: shows this is a video */}
+        {/* Play badge: indicates this is a video, hidden once controls are shown */}
         {!active && (
           <div
             style={{
@@ -2380,24 +2387,34 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
                                   src={resolveUrl(node.src)}
                                   preload="metadata"
                                   playsInline
-                                  style={{ width: "100%", height: "auto", borderRadius: "var(--radius-md)", display: "block", pointerEvents: "none" }}
+                                  // Show controls on hover so the user can play/pause,
+                                  // seek, and adjust volume directly in the grid card.
+                                  controls={hoveredNodeId === node.id}
+                                  style={{ width: "100%", height: "auto", borderRadius: "var(--radius-md)", display: "block" }}
+                                  // Stop propagation so video interactions don't fire
+                                  // the grid item's onClick (which would open the overlay).
+                                  onPointerDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => e.stopPropagation()}
                                 />
-                                <div
-                                  style={{
-                                    position: "absolute",
-                                    inset: 0,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    pointerEvents: "none",
-                                  }}
-                                >
-                                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                    <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
-                                      <path d="M1 1L11 7L1 13V1Z" fill="white" />
-                                    </svg>
+                                {/* Play badge: hidden once controls appear on hover */}
+                                {hoveredNodeId !== node.id && (
+                                  <div
+                                    style={{
+                                      position: "absolute",
+                                      inset: 0,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      pointerEvents: "none",
+                                    }}
+                                  >
+                                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                      <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
+                                        <path d="M1 1L11 7L1 13V1Z" fill="white" />
+                                      </svg>
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
                               <div
                                 className="tc-grid__item-annotation-collapse"
