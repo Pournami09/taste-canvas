@@ -285,11 +285,8 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
             style={{
               position: "absolute",
               ...pos,
-              width: 22,
-              height: 22,
-              borderRadius: "50%",
-              background: "var(--surface-raised)",
-              border: "1px solid var(--border-default)",
+              width: 16,
+              height: 16,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
