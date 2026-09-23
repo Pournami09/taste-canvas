@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownUp, Plus, LayoutDashboard, Code, Keyboard, RotateCw } from "lucide-react";
+import { ArrowDownUp, Plus, LayoutDashboard, Code, Keyboard } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { ViewTogglePill, type View } from "@/components/features/ViewTogglePill";
 import { AnnotationCard } from "@/components/features/AnnotationCard";
@@ -204,7 +204,6 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
   const { hovered, onMouseEnter, onMouseLeave } = useHoverWithDelay(200);
   const [annotationEditing, setAnnotationEditing] = useState(false);
   const [liveRotation, setLiveRotation] = useState<number | null>(null);
-  const [hoveredHandleIdx, setHoveredHandleIdx] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const rotateStartAngleRef = useRef<number | null>(null);
   const rotateStartRotationRef = useRef(0);
@@ -213,6 +212,13 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
   const active = hovered || isSelected;
   const imgH = node.canvasH > 0 ? node.canvasH : undefined;
   const displayRotation = liveRotation ?? node.canvasRotation;
+
+  // Annotation position: computed outside the rotation so the card never overlaps the image.
+  const frameW = node.canvasW + 2 * FRAME_PADDING;
+  const frameH = (node.canvasH > 0 ? node.canvasH : node.canvasW * 0.75) + 2 * FRAME_PADDING;
+  const normRot = ((displayRotation % 360) + 360) % 360;
+  const annotLeft = (normRot === 90 || normRot === 270) ? frameW / 2 + frameH / 2 + 12 : frameW + 12;
+  const annotTop  = (normRot === 90 || normRot === 270) ? frameH / 2 - frameW / 2 : 0;
 
   function onRotatePointerDown(e: React.PointerEvent) {
     e.stopPropagation();
@@ -242,6 +248,7 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
   }
 
   return (
+    <>
     <div
       ref={rootRef}
       className="tc-image-node"
@@ -280,26 +287,18 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
             onPointerMove={onRotatePointerMove}
             onPointerUp={onRotatePointerUp}
             onPointerCancel={onRotatePointerUp}
-            onMouseEnter={() => setHoveredHandleIdx(i)}
-            onMouseLeave={() => setHoveredHandleIdx(null)}
             style={{
               position: "absolute",
               ...pos,
               width: 16,
               height: 16,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
               cursor: liveRotation !== null ? "grabbing" : "grab",
               zIndex: 10,
               opacity: showOverlay ? 1 : 0,
               pointerEvents: showOverlay ? "auto" : "none",
               transition: "opacity 0.15s ease",
-              color: "var(--text-secondary)",
             }}
-          >
-            {hoveredHandleIdx === i && <RotateCw size={11} />}
-          </div>
+          />
         ))}
 
 
@@ -374,33 +373,32 @@ function ImageNodeView({ node, isSelected, isConnecting, scale, resolveUrl, onAn
           />
         </div>
 
-        {/* Annotation card: right (counter-rotated to stay upright) */}
-        <div
-          className="tc-image-node__annotation-slot"
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerUp={(e) => e.stopPropagation()}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: "100%",
-            paddingLeft: 12,
-            zIndex: 10,
-            opacity: showOverlay ? 1 : 0,
-            pointerEvents: showOverlay ? "auto" : "none",
-            transition: "opacity 0.15s ease",
-            transform: `rotate(${-displayRotation}deg)`,
-            transformOrigin: "0 0",
-          }}
-        >
-          <AnnotationCard
-            initialBody={node.annotation}
-            onSave={onAnnotationSave}
-            onEditingChange={setAnnotationEditing}
-            hideToolbar
-          />
-        </div>
       </div>
     </div>
+
+    {/* Annotation card: sits outside the rotation transform so it never overlaps the image */}
+    <div
+      className="tc-image-node__annotation-slot"
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+      style={{
+        position: "absolute",
+        left: annotLeft,
+        top: annotTop,
+        zIndex: 20,
+        opacity: showOverlay ? 1 : 0,
+        pointerEvents: showOverlay ? "auto" : "none",
+        transition: "opacity 0.15s ease",
+      }}
+    >
+      <AnnotationCard
+        initialBody={node.annotation}
+        onSave={onAnnotationSave}
+        onEditingChange={setAnnotationEditing}
+        hideToolbar
+      />
+    </div>
+    </>
   );
 }
 
@@ -803,7 +801,7 @@ function CanvasView({
   // Resize refs
   const resizingNodeId = useRef<string | null>(null);
   const resizeCorner   = useRef<Corner | null>(null);
-  const resizeStart    = useRef<{ w: number; h: number; x: number; y: number; ar: number } | null>(null);
+  const resizeStart    = useRef<{ w: number; h: number; x: number; y: number; ar: number; rotation: number } | null>(null);
 
   // Multi-select refs
   const isSelectingRect     = useRef(false);
@@ -1144,6 +1142,7 @@ function CanvasView({
               w: node.canvasW, h: node.canvasH || node.canvasW * 0.75,
               x: node.canvasX, y: node.canvasY,
               ar: node.canvasW / (node.canvasH || node.canvasW * 0.75),
+              rotation: node.type === "image" ? (node as ImageNode).canvasRotation : 0,
             };
             pointerStart.current = { x: e.clientX, y: e.clientY };
             lastPos.current      = { x: e.clientX, y: e.clientY };
@@ -1204,8 +1203,12 @@ function CanvasView({
 
       if (resizingNodeId.current && resizeStart.current && resizeCorner.current && pointerStart.current) {
         const { scale } = transformRef.current;
-        const { w: origW, h: origH, x: origX, y: origY, ar } = resizeStart.current;
-        const totalDx = (e.clientX - pointerStart.current.x) / scale;
+        const { w: origW, h: origH, x: origX, y: origY, ar, rotation } = resizeStart.current;
+        const dxScreen = (e.clientX - pointerStart.current.x) / scale;
+        const dyScreen = (e.clientY - pointerStart.current.y) / scale;
+        // Project screen-space delta onto the node's local X axis (which is rotated by θ).
+        const θ = (rotation * Math.PI) / 180;
+        const totalDx = dxScreen * Math.cos(θ) + dyScreen * Math.sin(θ);
         let newW: number;
         let newX = origX;
         let newY = origY;
