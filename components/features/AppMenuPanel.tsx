@@ -437,10 +437,7 @@ export function AppMenuPanel({
     <div
       className="tc-app-menu"
       style={{
-        position: "fixed",
-        top: 24,
-        right: 24,
-        zIndex: 300,
+        position: "relative",
       }}
     >
       {/* Avatar button */}

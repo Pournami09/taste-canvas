@@ -1965,6 +1965,10 @@ type GridViewProps = {
   setNodes: React.Dispatch<React.SetStateAction<CanvasNode[]>>;
   resolveUrl: (src: string) => string;
   onNodeClick: (nodeId: string) => void;
+  sortNewest: boolean;
+  setSortNewest: React.Dispatch<React.SetStateAction<boolean>>;
+  columnCount: number;
+  setColumnCount: React.Dispatch<React.SetStateAction<number>>;
 };
 
 type InsertionIndicator = {
@@ -1986,8 +1990,7 @@ function shallowEqualIndicator(a: InsertionIndicator, b: InsertionIndicator): bo
   return false;
 }
 
-function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }: GridViewProps) {
-  const [sortNewest, setSortNewest] = useState(false);
+function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick, sortNewest, setSortNewest, columnCount, setColumnCount }: GridViewProps) {
   const [draggedId, setDraggedId]   = useState<string | null>(null);
   const [insertionIndicator, setInsertionIndicator] = useState<InsertionIndicator>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -1997,8 +2000,6 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
   const columnRefs = useRef<(HTMLDivElement | null)[]>([]);
   const lastIndicatorRef = useRef<InsertionIndicator>(null);
   const draggedNodeHeightRef = useRef(200);
-
-  const [columnCount, setColumnCount] = useState(4);
 
   // Restore scroll position on mount
   useEffect(() => {
@@ -2248,67 +2249,6 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
           </div>
         ) : (
           <>
-            {/* Fixed grid controls: column slider + sort, aligned beside AppMenu */}
-            <div
-              className="tc-grid__controls"
-              style={{
-                position: "fixed",
-                top: 24,
-                right: 72,
-                zIndex: 200,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              {/* Column count slider */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "var(--font-size-xs)",
-                  letterSpacing: "var(--letter-spacing-wide)",
-                  textTransform: "uppercase",
-                  color: "var(--text-secondary)",
-                  minWidth: 18,
-                  textAlign: "right",
-                  userSelect: "none",
-                }}>
-                  {columnCount}
-                </span>
-                <input
-                  type="range"
-                  min={2}
-                  max={4}
-                  step={1}
-                  value={columnCount}
-                  onChange={(e) => setColumnCount(Number(e.target.value))}
-                  aria-label="Column count"
-                  style={{ width: 56, cursor: "pointer", accentColor: "var(--accent-default)" }}
-                />
-              </div>
-
-              {/* Sort button */}
-              <button
-                onClick={() => setSortNewest((v) => !v)}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  padding: "6px 12px",
-                  borderRadius: "var(--radius-sm)",
-                  background: sortNewest ? "var(--accent-subtle)" : "var(--surface-raised)",
-                  border: `1px solid ${sortNewest ? "var(--accent-default)" : "var(--border-subtle)"}`,
-                  color: sortNewest ? "var(--accent-default)" : "var(--text-secondary)",
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "var(--font-size-xs)",
-                  letterSpacing: "var(--letter-spacing-wide)",
-                  textTransform: "uppercase",
-                  cursor: "pointer",
-                  transition: "all var(--motion-duration-small) var(--motion-easing-out)",
-                }}
-              >
-                <ArrowDownUp size={11} />
-                Newest first
-              </button>
-            </div>
 
             {/* Manual flexbox masonry */}
             <div
@@ -2561,6 +2501,8 @@ export function CanvasClient({
   const [nodes, setNodes]           = useState<CanvasNode[]>(initialNodes);
   const [edges, setEdges]           = useState<Edge[]>(initialEdges);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sortNewest, setSortNewest] = useState(false);
+  const [columnCount, setColumnCount] = useState(4);
 
   // Signed URL resolution for R2 images
   const { resolveUrl, signKey } = useSignedUrls(nodes, initialSignedUrls);
@@ -3211,6 +3153,10 @@ export function CanvasClient({
             setNodes={setNodes}
             resolveUrl={resolveUrl}
             onNodeClick={handleNodeClick}
+            sortNewest={sortNewest}
+            setSortNewest={setSortNewest}
+            columnCount={columnCount}
+            setColumnCount={setColumnCount}
           />
         )}
       </div>
@@ -3258,23 +3204,88 @@ export function CanvasClient({
         onClearAll={() => setActiveFilterTags(new Set())}
       />
 
-      {/* Top-right: AppMenu */}
-      <AppMenuPanel
-        displayName={profile.display_name}
-        userEmail={userEmail}
-        canvasTitle={canvasTitle}
-        onTitleChange={handleTitleChange}
-        reflectionMode={reflectionMode}
-        onReflectionModeChange={handleReflectionModeChange}
-        onShowShortcuts={() => setShowShortcuts(true)}
-        onShowOnboarding={() => setShowOnboarding(true)}
-        onImportBookmarks={handleImportBookmarks}
-        canvasList={localCanvasList}
-        currentCanvasId={canvas.id}
-        profileId={profile.id}
-        onVisibilityChange={handleVisibilityChange}
-        onDeleteCanvas={handleDeleteCanvas}
-      />
+      {/* Top-right: grid controls + AppMenu */}
+      <div
+        className="tc-page__top-right"
+        style={{
+          position: "fixed",
+          top: 24,
+          right: 24,
+          zIndex: 300,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        {view === "grid" && (
+          <>
+            {/* Column count slider */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--font-size-xs)",
+                letterSpacing: "var(--letter-spacing-wide)",
+                textTransform: "uppercase",
+                color: "var(--text-secondary)",
+                minWidth: 18,
+                textAlign: "right",
+                userSelect: "none",
+              }}>
+                {columnCount}
+              </span>
+              <input
+                type="range"
+                min={2}
+                max={4}
+                step={1}
+                value={columnCount}
+                onChange={(e) => setColumnCount(Number(e.target.value))}
+                aria-label="Column count"
+                style={{ width: 56, cursor: "pointer", accentColor: "var(--accent-default)" }}
+              />
+            </div>
+
+            {/* Sort button */}
+            <button
+              onClick={() => setSortNewest((v) => !v)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "6px 12px",
+                borderRadius: "var(--radius-sm)",
+                background: sortNewest ? "var(--accent-subtle)" : "var(--surface-raised)",
+                border: `1px solid ${sortNewest ? "var(--accent-default)" : "var(--border-subtle)"}`,
+                color: sortNewest ? "var(--accent-default)" : "var(--text-secondary)",
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--font-size-xs)",
+                letterSpacing: "var(--letter-spacing-wide)",
+                textTransform: "uppercase",
+                cursor: "pointer",
+                transition: "all var(--motion-duration-small) var(--motion-easing-out)",
+              }}
+            >
+              <ArrowDownUp size={11} />
+              Newest first
+            </button>
+          </>
+        )}
+
+        <AppMenuPanel
+          displayName={profile.display_name}
+          userEmail={userEmail}
+          canvasTitle={canvasTitle}
+          onTitleChange={handleTitleChange}
+          reflectionMode={reflectionMode}
+          onReflectionModeChange={handleReflectionModeChange}
+          onShowShortcuts={() => setShowShortcuts(true)}
+          onShowOnboarding={() => setShowOnboarding(true)}
+          onImportBookmarks={handleImportBookmarks}
+          canvasList={localCanvasList}
+          currentCanvasId={canvas.id}
+          profileId={profile.id}
+          onVisibilityChange={handleVisibilityChange}
+          onDeleteCanvas={handleDeleteCanvas}
+        />
+      </div>
 
       {/* Reflection prompt (appears after paste) */}
       {pendingReflectionNodeId && (
