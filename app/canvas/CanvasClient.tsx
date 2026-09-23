@@ -2190,7 +2190,7 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick, s
         overflowY: "auto",
       }}
     >
-      <div className="tc-grid__container" style={{ maxWidth: "var(--grid-max-width)", margin: "0 auto", padding: "48px var(--grid-padding-x) 160px" }}>
+      <div className="tc-grid__container" style={{ maxWidth: "var(--grid-max-width)", margin: "0 auto", padding: "96px var(--grid-padding-x) 160px" }}>
         {!hasNodes ? (
           /* Empty state */
           <div
