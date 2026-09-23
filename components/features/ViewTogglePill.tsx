@@ -52,7 +52,7 @@ export function ViewTogglePill({ value, onChange, className }: ViewTogglePillPro
       {/* Sliding active background */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 rounded-full bg-surface-tab-active"
+        className="pointer-events-none absolute inset-0 rounded-full bg-surface-tab-active block self-center"
         style={{
           clipPath: bg.clipPath || undefined,
           transition: bg.animate ? "clip-path 200ms cubic-bezier(0.77, 0, 0.175, 1)" : "none",

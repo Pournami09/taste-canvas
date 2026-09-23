@@ -1977,13 +1977,7 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
   const [sortNewest, setSortNewest] = useState(false);
   const [draggedId, setDraggedId]   = useState<string | null>(null);
   const [insertionIndicator, setInsertionIndicator] = useState<InsertionIndicator>(null);
-  const [expandedAnnotations, setExpandedAnnotations] = useState<Set<string>>(
-    () => new Set(
-      nodes
-        .filter((n) => (n.type === "image" || n.type === "link") && (n as ImageNode | LinkNode).annotation.trim() !== "")
-        .map((n) => n.id)
-    )
-  );
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const dragOccurredRef = useRef(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const masonryRef = useRef<HTMLDivElement>(null);
@@ -2021,21 +2015,6 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
       sessionStorage.setItem(`tc-grid-scroll-${canvasId}`, String(el.scrollTop));
     };
   }, [canvasId]);
-
-  const connectedNodeIds = useMemo(() => {
-    const ids = new Set<string>();
-    edges.forEach((e) => { ids.add(e.fromId); ids.add(e.toId); });
-    return ids;
-  }, [edges]);
-
-  function toggleAnnotation(id: string) {
-    setExpandedAnnotations((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   const displayNodes = useMemo(() => {
     if (sortNewest) return [...nodes].sort((a, b) => b.createdAt - a.createdAt);
@@ -2297,8 +2276,8 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
                   style={{ flex: 1, display: "flex", flexDirection: "column", gap: "var(--grid-gap)" }}
                 >
                   {colNodes.map((node, posInCol) => {
-                    const annotationOpen = expandedAnnotations.has(node.id);
-                    const isConnected    = connectedNodeIds.has(node.id);
+                    const hasAnnotation  = (node.type === "image" || node.type === "link" || node.type === "video") && (node as ImageNode | LinkNode | VideoNode).annotation.trim() !== "";
+                    const annotationOpen = hoveredNodeId === node.id && hasAnnotation;
 
                     const isInsertBefore =
                       insertionIndicator?.type === "horizontal" &&
@@ -2338,13 +2317,11 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
                           draggable
                           onDragStart={(e) => handleDragStart(e, node.id)}
                           onDragEnd={handleDragEnd}
+                          onMouseEnter={() => setHoveredNodeId(node.id)}
+                          onMouseLeave={() => setHoveredNodeId((prev) => prev === node.id ? null : prev)}
                           onClick={() => {
                             if (dragOccurredRef.current) return;
-                            if (node.type !== "annotation") {
-                              onNodeClick(node.id);
-                            } else {
-                              toggleAnnotation(node.id);
-                            }
+                            onNodeClick(node.id);
                           }}
                           style={{
                             position: "relative",
@@ -2411,18 +2388,6 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
                                   draggable={false}
                                   style={{ width: "100%", height: "auto", borderRadius: "var(--radius-md)", display: "block", pointerEvents: "none" }}
                                 />
-                                {isConnected && (
-                                  <div
-                                    className="tc-grid__item-endpoint-dot"
-                                    style={{
-                                      position: "absolute", top: 8, right: 8,
-                                      width: 8, height: 8, borderRadius: "50%",
-                                      background: "var(--border-strong)",
-                                      border: "1.5px solid var(--surface-raised)",
-                                      pointerEvents: "none", transition: "background 0.2s ease",
-                                    }}
-                                  />
-                                )}
                               </div>
                               <div
                                 className="tc-grid__item-annotation-collapse"
@@ -2452,18 +2417,6 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
                                   width="100%"
                                   url={node.url}
                                 />
-                                {isConnected && (
-                                  <div
-                                    className="tc-grid__item-endpoint-dot"
-                                    style={{
-                                      position: "absolute", top: 8, right: 8,
-                                      width: 8, height: 8, borderRadius: "50%",
-                                      background: "var(--border-strong)",
-                                      border: "1.5px solid var(--surface-raised)",
-                                      pointerEvents: "none",
-                                    }}
-                                  />
-                                )}
                               </div>
                               <div
                                 className="tc-grid__item-annotation-collapse"
