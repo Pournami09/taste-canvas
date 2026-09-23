@@ -144,40 +144,6 @@ function useHoverWithDelay(delay = 200) {
   return { hovered, onMouseEnter, onMouseLeave };
 }
 
-// ---------------------------------------------------------------------------
-// useColumnCount (responsive masonry column count)
-// ---------------------------------------------------------------------------
-
-function useColumnCount(): number {
-  const [count, setCount] = useState(4);
-
-  useEffect(() => {
-    function calc() {
-      const w = window.innerWidth;
-      if (w < 640) return 1;
-      if (w < 768) return 2;
-      if (w < 1024) return 3;
-      return 4;
-    }
-    setCount(calc());
-
-    const mql3 = window.matchMedia("(min-width: 1024px)");
-    const mql2 = window.matchMedia("(min-width: 768px)");
-    const mql1 = window.matchMedia("(min-width: 640px)");
-
-    function onChange() { setCount(calc()); }
-    mql3.addEventListener("change", onChange);
-    mql2.addEventListener("change", onChange);
-    mql1.addEventListener("change", onChange);
-    return () => {
-      mql3.removeEventListener("change", onChange);
-      mql2.removeEventListener("change", onChange);
-      mql1.removeEventListener("change", onChange);
-    };
-  }, []);
-
-  return count;
-}
 
 function distributeToColumns(nodes: CanvasNode[], colCount: number): CanvasNode[][] {
   const cols: CanvasNode[][] = Array.from({ length: colCount }, () => []);
@@ -2032,7 +1998,7 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
   const lastIndicatorRef = useRef<InsertionIndicator>(null);
   const draggedNodeHeightRef = useRef(200);
 
-  const columnCount = useColumnCount();
+  const [columnCount, setColumnCount] = useState(4);
 
   // Restore scroll position on mount
   useEffect(() => {
@@ -2282,8 +2248,46 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick }:
           </div>
         ) : (
           <>
-            {/* Toolbar row */}
-            <div className="tc-grid__toolbar" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
+            {/* Fixed grid controls: column slider + sort, aligned beside AppMenu */}
+            <div
+              className="tc-grid__controls"
+              style={{
+                position: "fixed",
+                top: 24,
+                right: 72,
+                zIndex: 200,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              {/* Column count slider */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "var(--font-size-xs)",
+                  letterSpacing: "var(--letter-spacing-wide)",
+                  textTransform: "uppercase",
+                  color: "var(--text-secondary)",
+                  minWidth: 18,
+                  textAlign: "right",
+                  userSelect: "none",
+                }}>
+                  {columnCount}
+                </span>
+                <input
+                  type="range"
+                  min={2}
+                  max={4}
+                  step={1}
+                  value={columnCount}
+                  onChange={(e) => setColumnCount(Number(e.target.value))}
+                  aria-label="Column count"
+                  style={{ width: 56, cursor: "pointer", accentColor: "var(--accent-default)" }}
+                />
+              </div>
+
+              {/* Sort button */}
               <button
                 onClick={() => setSortNewest((v) => !v)}
                 style={{
