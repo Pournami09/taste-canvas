@@ -18,6 +18,9 @@ export function useAutoSave(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savingRef = useRef(false);
   const lastSavedRef = useRef<string>("");
+  // Skip save on the initial mount: only persist user-initiated changes.
+  // This prevents HMR remounts from overwriting the DB with stale/empty state.
+  const hasMountedRef = useRef(false);
 
   const save = useCallback(
     async (currentNodes: CanvasNode[], currentEdges: Edge[]) => {
@@ -93,9 +96,14 @@ export function useAutoSave(
     [canvasId]
   );
 
-  // Debounced watcher
+  // Debounced watcher — skips the initial mount run.
   useEffect(() => {
     if (!canvasId) return;
+
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
 
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
