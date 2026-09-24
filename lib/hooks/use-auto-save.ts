@@ -39,37 +39,41 @@ export function useAutoSave(
       try {
         const supabase = createClient();
 
-        // Full-replace strategy: delete all, then re-insert.
-        // Safe at 30-node scale.
-        const { error: delNodesErr } = await supabase
-          .from("canvas_nodes")
-          .delete()
-          .eq("canvas_id", canvasId);
-
-        if (delNodesErr) throw delNodesErr;
-
-        // Edges are cascade-deleted with nodes, but explicitly clear them
-        // in case there were orphaned edges.
-        const { error: delEdgesErr } = await supabase
-          .from("canvas_edges")
-          .delete()
-          .eq("canvas_id", canvasId);
-
-        if (delEdgesErr) throw delEdgesErr;
-
-        // Insert nodes
+        // Step 1: Upsert all current nodes.
+        // Safe to interrupt: if the page reloads after this point, all node
+        // data is already in the DB. No data loss from a mid-save page reload.
         if (currentNodes.length > 0) {
           const dbNodes = currentNodes.map((n, i) =>
             clientNodeToDb(n, canvasId, i)
           );
-          const { error: insertNodesErr } = await supabase
+          const { error: upsertNodesErr } = await supabase
             .from("canvas_nodes")
-            .insert(dbNodes);
-
-          if (insertNodesErr) throw insertNodesErr;
+            .upsert(dbNodes, { onConflict: "id" });
+          if (upsertNodesErr) throw upsertNodesErr;
         }
 
-        // Insert edges (need node IDs to exist first)
+        // Step 2: Delete nodes that are no longer in the current list.
+        // These cascade-delete their associated edges automatically.
+        // Only runs after step 1 has safely written all live data.
+        if (currentNodes.length > 0) {
+          const nodeIds = currentNodes.map((n) => n.id);
+          const { error: delOrphansErr } = await supabase
+            .from("canvas_nodes")
+            .delete()
+            .eq("canvas_id", canvasId)
+            .not("id", "in", `(${nodeIds.join(",")})`);
+          if (delOrphansErr) throw delOrphansErr;
+        }
+
+        // Step 3: Replace edges (delete all, re-insert).
+        // Edges are cheap connection metadata; losing them is far less harmful
+        // than losing node content. Node data is fully safe before this runs.
+        const { error: delEdgesErr } = await supabase
+          .from("canvas_edges")
+          .delete()
+          .eq("canvas_id", canvasId);
+        if (delEdgesErr) throw delEdgesErr;
+
         if (currentEdges.length > 0) {
           const dbEdges = currentEdges.map((e) =>
             clientEdgeToDb(e, canvasId)
@@ -77,7 +81,6 @@ export function useAutoSave(
           const { error: insertEdgesErr } = await supabase
             .from("canvas_edges")
             .insert(dbEdges);
-
           if (insertEdgesErr) throw insertEdgesErr;
         }
 
