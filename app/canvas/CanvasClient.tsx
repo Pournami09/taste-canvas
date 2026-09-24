@@ -2383,15 +2383,53 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick, s
                             </>
                           ) : node.type === "image" ? (
                             <>
-                              <div className="tc-grid__item-media" style={{ position: "relative" }}>
-                                <img
-                                  className="tc-grid__item-image"
-                                  src={resolveUrl(node.src)}
-                                  alt={node.alt}
-                                  draggable={false}
-                                  style={{ width: "100%", height: "auto", borderRadius: "var(--radius-md)", display: "block", pointerEvents: "none" }}
-                                />
-                              </div>
+                              {(() => {
+                                const normRot = (((node as ImageNode).canvasRotation % 360) + 360) % 360;
+                                const needs90 = normRot === 90 || normRot === 270;
+                                // Scale factor so the rotated image covers the container (object-fit: cover equivalent)
+                                const coverScale = needs90 && node.canvasH > 0
+                                  ? Math.max(node.canvasW, node.canvasH) / Math.min(node.canvasW, node.canvasH)
+                                  : 1;
+                                return (
+                                  <div
+                                    className="tc-grid__item-media"
+                                    style={{
+                                      position: "relative",
+                                      overflow: "hidden",
+                                      borderRadius: "var(--radius-md)",
+                                      ...(needs90 && node.canvasH > 0 ? {
+                                        aspectRatio: `${node.canvasH} / ${node.canvasW}`,
+                                      } : {}),
+                                    }}
+                                  >
+                                    <img
+                                      className="tc-grid__item-image"
+                                      src={resolveUrl(node.src)}
+                                      alt={node.alt}
+                                      draggable={false}
+                                      style={needs90 ? {
+                                        position: "absolute",
+                                        inset: 0,
+                                        width: "100%",
+                                        height: "100%",
+                                        objectFit: "cover",
+                                        display: "block",
+                                        pointerEvents: "none",
+                                        transform: `rotate(${normRot}deg) scale(${coverScale.toFixed(4)})`,
+                                        transformOrigin: "center",
+                                      } : {
+                                        width: "100%",
+                                        height: "auto",
+                                        borderRadius: "var(--radius-md)",
+                                        display: "block",
+                                        pointerEvents: "none",
+                                        transform: normRot === 180 ? "rotate(180deg)" : undefined,
+                                      }}
+                                    />
+                                  </div>
+                                );
+                              })()}
+
                               <div
                                 className="tc-grid__item-annotation-collapse"
                                 style={{
