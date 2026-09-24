@@ -5,7 +5,7 @@ import { X, ExternalLink, Trash2 } from "lucide-react";
 import { AnnotationCard } from "./AnnotationCard";
 import { LinkPreviewCard } from "./LinkPreviewCard";
 import { TagInput } from "./TagInput";
-import type { CanvasNode, LinkNode, Edge } from "@/lib/canvas-types";
+import type { CanvasNode, ImageNode, LinkNode, Edge } from "@/lib/canvas-types";
 import { parseTweetId } from "@/lib/twitter";
 
 type ExpandedOverlayProps = {
@@ -282,17 +282,24 @@ export function ExpandedOverlay({
           }}
         >
           {node.type === "image" ? (
-            <img
-              className="tc-expanded-overlay__media-image"
-              src={resolveUrl(node.src)}
-              alt={node.alt}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                display: "block",
-              }}
-            />
+            (() => {
+              const normRot = (((node as ImageNode).canvasRotation % 360) + 360) % 360;
+              return (
+                <img
+                  className="tc-expanded-overlay__media-image"
+                  src={resolveUrl(node.src)}
+                  alt={node.alt}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                    transform: normRot !== 0 ? `rotate(${normRot}deg)` : undefined,
+                    transformOrigin: "center",
+                  }}
+                />
+              );
+            })()
           ) : node.type === "link" ? (
             <div className="tc-expanded-overlay__media-link" style={{ width: "100%", padding: "20px" }}>
               <LinkPreviewCard data={node.preview} fetchError={node.fetchError} width="100%" url={node.url} />

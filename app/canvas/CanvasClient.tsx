@@ -2386,10 +2386,6 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick, s
                               {(() => {
                                 const normRot = (((node as ImageNode).canvasRotation % 360) + 360) % 360;
                                 const needs90 = normRot === 90 || normRot === 270;
-                                // Scale factor so the rotated image covers the container (object-fit: cover equivalent)
-                                const coverScale = needs90 && node.canvasH > 0
-                                  ? Math.max(node.canvasW, node.canvasH) / Math.min(node.canvasW, node.canvasH)
-                                  : 1;
                                 return (
                                   <div
                                     className="tc-grid__item-media"
@@ -2397,6 +2393,7 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick, s
                                       position: "relative",
                                       overflow: "hidden",
                                       borderRadius: "var(--radius-md)",
+                                      // For 90°/270°: swap aspect-ratio so the container matches the rotated footprint
                                       ...(needs90 && node.canvasH > 0 ? {
                                         aspectRatio: `${node.canvasH} / ${node.canvasW}`,
                                       } : {}),
@@ -2407,16 +2404,19 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick, s
                                       src={resolveUrl(node.src)}
                                       alt={node.alt}
                                       draggable={false}
-                                      style={needs90 ? {
+                                      style={needs90 && node.canvasH > 0 ? {
+                                        // Center the img, set pre-rotation width to the post-rotation height of the container
+                                        // (canvasW/canvasH * 100% of container width), then rotate.
+                                        // After rotate(90°): visual width = img CSS height = CW, visual height = img CSS width = CW*(canvasW/canvasH).
+                                        // This fills the container exactly without cropping.
                                         position: "absolute",
-                                        inset: 0,
-                                        width: "100%",
-                                        height: "100%",
-                                        objectFit: "cover",
+                                        top: "50%",
+                                        left: "50%",
+                                        width: `${(node.canvasW / node.canvasH) * 100}%`,
+                                        height: "auto",
                                         display: "block",
                                         pointerEvents: "none",
-                                        transform: `rotate(${normRot}deg) scale(${coverScale.toFixed(4)})`,
-                                        transformOrigin: "center",
+                                        transform: `translate(-50%, -50%) rotate(${normRot}deg)`,
                                       } : {
                                         width: "100%",
                                         height: "auto",
