@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { X, ExternalLink } from "lucide-react";
+import { X, ExternalLink, Trash2 } from "lucide-react";
 import { AnnotationCard } from "./AnnotationCard";
 import { LinkPreviewCard } from "./LinkPreviewCard";
 import { TagInput } from "./TagInput";
@@ -17,6 +17,7 @@ type ExpandedOverlayProps = {
   onAnnotationSave: (nodeId: string, body: string) => void;
   onNavigate: (nodeId: string) => void;
   onTagsSave: (nodeId: string, tags: string[]) => void;
+  onDelete?: (nodeId: string) => void;
   allCanvasTags: string[];
   readOnly?: boolean;
 };
@@ -142,6 +143,7 @@ export function ExpandedOverlay({
   onAnnotationSave,
   onNavigate,
   onTagsSave,
+  onDelete,
   allCanvasTags,
   readOnly = false,
 }: ExpandedOverlayProps) {
@@ -202,30 +204,68 @@ export function ExpandedOverlay({
           outline: "none",
         }}
       >
-        {/* Close button */}
-        <button
-          className="tc-expanded-overlay__close"
-          onClick={onClose}
-          aria-label="Close"
+        {/* Header actions */}
+        <div
           style={{
             position: "absolute",
             top: 12,
             right: 12,
             zIndex: 10,
-            width: 28,
-            height: 28,
-            borderRadius: "50%",
-            background: "var(--surface-subtle)",
-            border: "1px solid var(--border-subtle)",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: "var(--text-secondary)",
+            gap: 6,
           }}
         >
-          <X size={14} />
-        </button>
+          {onDelete && !readOnly && (
+            <button
+              className="tc-expanded-overlay__delete"
+              onClick={() => onDelete(node.id)}
+              aria-label="Delete node"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                background: "var(--surface-subtle)",
+                border: "1px solid var(--border-subtle)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: "var(--text-secondary)",
+                transition: "color 120ms ease, border-color 120ms ease",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.color = "var(--state-error)";
+                (e.currentTarget as HTMLElement).style.borderColor = "var(--state-error)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
+                (e.currentTarget as HTMLElement).style.borderColor = "var(--border-subtle)";
+              }}
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+          <button
+            className="tc-expanded-overlay__close"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              background: "var(--surface-subtle)",
+              border: "1px solid var(--border-subtle)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              color: "var(--text-secondary)",
+            }}
+          >
+            <X size={14} />
+          </button>
+        </div>
 
         {/* Media area */}
         <div

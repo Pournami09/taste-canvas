@@ -1965,6 +1965,7 @@ type GridViewProps = {
   setNodes: React.Dispatch<React.SetStateAction<CanvasNode[]>>;
   resolveUrl: (src: string) => string;
   onNodeClick: (nodeId: string) => void;
+  selectedIds: Set<string>;
   sortNewest: boolean;
   setSortNewest: React.Dispatch<React.SetStateAction<boolean>>;
   columnCount: number;
@@ -1990,7 +1991,7 @@ function shallowEqualIndicator(a: InsertionIndicator, b: InsertionIndicator): bo
   return false;
 }
 
-function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick, sortNewest, setSortNewest, columnCount, setColumnCount }: GridViewProps) {
+function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick, selectedIds, sortNewest, setSortNewest, columnCount, setColumnCount }: GridViewProps) {
   const [draggedId, setDraggedId]   = useState<string | null>(null);
   const [insertionIndicator, setInsertionIndicator] = useState<InsertionIndicator>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -2190,7 +2191,7 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick, s
         overflowY: "auto",
       }}
     >
-      <div className="tc-grid__container" style={{ maxWidth: "var(--grid-max-width)", margin: "0 auto", padding: "96px var(--grid-padding-x) 160px" }}>
+      <div className="tc-grid__container" style={{ maxWidth: "var(--grid-max-width)", margin: "0 auto", padding: "96px var(--grid-padding-x)" }}>
         {!hasNodes ? (
           /* Empty state */
           <div
@@ -2320,7 +2321,8 @@ function GridView({ canvasId, nodes, edges, setNodes, resolveUrl, onNodeClick, s
                             borderRadius: "var(--radius-md)",
                             cursor: "pointer",
                             transform: isBelow ? "translateY(10px)" : "translateY(0)",
-                            transition: `transform var(--motion-duration-small) var(--motion-easing-out), opacity 0.15s ease`,
+                            transition: `transform var(--motion-duration-small) var(--motion-easing-out), opacity 0.15s ease, box-shadow 120ms ease`,
+                            boxShadow: selectedIds.has(node.id) ? `0 0 0 2px var(--accent-default)` : undefined,
                           }}
                         >
                           {node.type === "video" ? (
@@ -2734,7 +2736,7 @@ export function CanvasClient({
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       const active = document.activeElement;
-      const inTextField = active?.tagName === "TEXTAREA" || active?.tagName === "INPUT";
+      const inTextField = active?.tagName === "TEXTAREA" || active?.tagName === "INPUT" || (active as HTMLElement)?.isContentEditable;
 
       // Search palette
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -2776,27 +2778,20 @@ export function CanvasClient({
 
       if (inTextField) return;
 
-      // Delete selected nodes
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedIdsRef.current.size > 0 && viewRef.current === "canvas") {
+      // Delete selected nodes (canvas and grid views)
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedIdsRef.current.size > 0) {
         e.preventDefault();
         const selIds = selectedIdsRef.current;
-        const toDelete = nodesRef.current
-          .map((n, i) => ({ node: n, index: i }))
-          .filter(({ node }) => selIds.has(node.id));
-        const deletedEdges = edgesRef.current.filter(
-          (edge) => selIds.has(edge.fromId) || selIds.has(edge.toId)
-        );
+        const toDelete = nodesRef.current.filter((n) => selIds.has(n.id));
         if (toDelete.length > 0) {
           checkpoint();
           setNodes((prev) => prev.filter((n) => !selIds.has(n.id)));
           setEdges((prev) => prev.filter((edge) => !selIds.has(edge.fromId) && !selIds.has(edge.toId)));
           setSelectedIds(new Set());
+          if (viewRef.current === "grid") setExpandedNodeId(null);
           const count = toDelete.length;
           toast(`Deleted ${count} node${count > 1 ? "s" : ""}`, {
-            action: {
-              label: "Undo",
-              onClick: undo,
-            },
+            action: { label: "Undo", onClick: undo },
             duration: 5000,
           });
         }
@@ -2815,8 +2810,24 @@ export function CanvasClient({
   // Callbacks
   // ---------------------------------------------------------------------------
 
+  const handleNodeDelete = useCallback((nodeId: string) => {
+    checkpoint();
+    setNodes((prev) => prev.filter((n) => n.id !== nodeId));
+    setEdges((prev) => prev.filter((e) => e.fromId !== nodeId && e.toId !== nodeId));
+    setSelectedIds(new Set());
+    setExpandedNodeId(null);
+    toast("Deleted node", { action: { label: "Undo", onClick: undo }, duration: 5000 });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkpoint]);
+
   const handleNodeClick = useCallback((nodeId: string) => {
     setExpandedNodeId((prev) => (prev === nodeId ? null : nodeId));
+    if (viewRef.current === "grid") {
+      setSelectedIds((prev) => {
+        const next = new Set([nodeId]);
+        return prev.size === 1 && prev.has(nodeId) ? new Set() : next;
+      });
+    }
   }, []);
 
   const handleNodeCreated = useCallback(
@@ -3153,6 +3164,7 @@ export function CanvasClient({
             setNodes={setNodes}
             resolveUrl={resolveUrl}
             onNodeClick={handleNodeClick}
+            selectedIds={selectedIds}
             sortNewest={sortNewest}
             setSortNewest={setSortNewest}
             columnCount={columnCount}
@@ -3306,6 +3318,7 @@ export function CanvasClient({
           onAnnotationSave={handleAnnotationSave}
           onNavigate={handleNavigate}
           onTagsSave={handleTagsSave}
+          onDelete={handleNodeDelete}
           allCanvasTags={allTags}
         />
       )}
