@@ -118,7 +118,6 @@ export function LinkPreviewCard({
           onError={() => setImgError(true)}
           style={{
             width: "100%",
-            height: 160,
             objectFit: "cover",
             display: "block",
             pointerEvents: "none",
